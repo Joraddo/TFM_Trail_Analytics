@@ -92,27 +92,27 @@ library(mgcv)
 
 ```{r Data upload: activities.csv}
 
-Activities_AN <- read.csv("~/Documents/Datos/Exportacion_noviembre/activities_12005698.csv",
+Activities_AN <- read.csv("~/Datos/Exportacion_noviembre/activities_12005698.csv",
                           stringsAsFactor=TRUE, sep=",")
-Activities_BC <- read.csv("~/Documents/Datos/Exportacion_noviembre/activities_39779781.csv",
+Activities_BC <- read.csv("~/Datos/Exportacion_noviembre/activities_39779781.csv",
                           stringsAsFactor=TRUE, sep=",")
-Activities_IB <- read.csv("~/Documents/Datos/Exportacion_noviembre/activities_57717801.csv",
+Activities_IB <- read.csv("~/Datos/Exportacion_noviembre/activities_57717801.csv",
                           stringsAsFactor=TRUE, sep=",")
-Activities_JA <- read.csv("~/Documents/Datos/Exportacion_noviembre/activities_106331448.csv",
+Activities_JA <- read.csv("~/Datos/Exportacion_noviembre/activities_106331448.csv",
                           stringsAsFactor=TRUE, sep=",")
-Activities_JP <- read.csv("~/Documents/Datos/Exportacion_noviembre/activities_21875774.csv",
+Activities_JP <- read.csv("~/Datos/Exportacion_noviembre/activities_21875774.csv",
                           stringsAsFactor=TRUE, sep=",")
-Activities_LJ <- read.csv("~/Documents/Datos/Exportacion_noviembre/activities_63055946.csv",
+Activities_LJ <- read.csv("~/Datos/Exportacion_noviembre/activities_63055946.csv",
                           stringsAsFactor=TRUE, sep=",")
-Activities_MB <- read.csv("~/Documents/Datos/Exportacion_noviembre/activities_73163720.csv",
+Activities_MB <- read.csv("~/Datos/Exportacion_noviembre/activities_73163720.csv",
                           stringsAsFactor=TRUE, sep=",")
-Activities_NC <- read.csv("~/Documents/Datos/Exportacion_noviembre/activities_36944607.csv",
+Activities_NC <- read.csv("~/Datos/Exportacion_noviembre/activities_36944607.csv",
                           stringsAsFactor=TRUE, sep=",")
-Activities_NP <- read.csv("~/Documents/Datos/Exportacion_noviembre/activities_49973975.csv",
+Activities_NP <- read.csv("~/Datos/Exportacion_noviembre/activities_49973975.csv",
                           stringsAsFactor=TRUE, sep=",")
-Activities_RC <- read.csv("~/Documents/Datos/Exportacion_noviembre/activities_21939621.csv",
+Activities_RC <- read.csv("~/Datos/Exportacion_noviembre/activities_21939621.csv",
                           stringsAsFactor=TRUE, sep=",")
-Activities_VS <- read.csv("~/Documents/Datos/Exportacion_noviembre/activities_85112912.csv",
+Activities_VS <- read.csv("~/Datos/Exportacion_noviembre/activities_85112912.csv",
                           stringsAsFactor=TRUE, sep=",")
 
 ```
@@ -121,27 +121,27 @@ Activities_VS <- read.csv("~/Documents/Datos/Exportacion_noviembre/activities_85
 
 ```{r Data upload: profile.csv}
 
-Profile_AN <- read.csv("~/Documents/Datos/Exportacion_noviembre/profile_12005698.csv",
+Profile_AN <- read.csv("~/Datos/Exportacion_noviembre/profile_12005698.csv",
                        stringsAsFactor=TRUE, sep=",")
-Profile_BC <- read.csv("~/Documents/Datos/Exportacion_noviembre/profile_39779781.csv",
+Profile_BC <- read.csv("~/Datos/Exportacion_noviembre/profile_39779781.csv",
                        stringsAsFactor=TRUE, sep=",")
-Profile_IB <- read.csv("~/Documents/Datos/Exportacion_noviembre/profile_57717801.csv",
+Profile_IB <- read.csv("~/Datos/Exportacion_noviembre/profile_57717801.csv",
                        stringsAsFactor=TRUE, sep=",")
-Profile_JA <- read.csv("~/Documents/Datos/Exportacion_noviembre/profile_106331448.csv",
+Profile_JA <- read.csv("~/Datos/Exportacion_noviembre/profile_106331448.csv",
                        stringsAsFactor=TRUE, sep=",")
-Profile_JP <- read.csv("~/Documents/Datos/Exportacion_noviembre/profile_21875774.csv",
+Profile_JP <- read.csv("~/Datos/Exportacion_noviembre/profile_21875774.csv",
                        stringsAsFactor=TRUE, sep=",")
-Profile_LJ <- read.csv("~/Documents/Datos/Exportacion_noviembre/profile_63055946.csv",
+Profile_LJ <- read.csv("~/Datos/Exportacion_noviembre/profile_63055946.csv",
                        stringsAsFactor=TRUE, sep=",")
-Profile_MB <- read.csv("~/Documents/Datos/Exportacion_noviembre/profile_73163720.csv",
+Profile_MB <- read.csv("~/Datos/Exportacion_noviembre/profile_73163720.csv",
                        stringsAsFactor=TRUE, sep=",")
-Profile_NC <- read.csv("~/Documents/Datos/Exportacion_noviembre/profile_36944607.csv",
+Profile_NC <- read.csv("~/Datos/Exportacion_noviembre/profile_36944607.csv",
                        stringsAsFactor=TRUE, sep=",")
-Profile_NP <- read.csv("~/Documents/Datos/Exportacion_noviembre/profile_49973975.csv",
+Profile_NP <- read.csv("~/Datos/Exportacion_noviembre/profile_49973975.csv",
                        stringsAsFactor=TRUE, sep=",")
-Profile_RC <- read.csv("~/Documents/Datos/Exportacion_noviembre/profile_21939621.csv",
+Profile_RC <- read.csv("~/Datos/Exportacion_noviembre/profile_21939621.csv",
                        stringsAsFactor=TRUE, sep=",")
-Profile_VS <- read.csv("~/Documents/Datos/Exportacion_noviembre/profile_85112912.csv",
+Profile_VS <- read.csv("~/Datos/Exportacion_noviembre/profile_85112912.csv",
                        stringsAsFactor=TRUE, sep=",")
 ```
 
