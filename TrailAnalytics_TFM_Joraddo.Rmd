@@ -1,0 +1,1644 @@
+---
+title: "Notebook código fuente proyecto Trail Analytics."
+author: "Jordi Adam Domingo"
+date: "2025-10-03"
+toc-title: Índice
+header-includes:
+  \usepackage{array} 
+output:
+  html_document:
+    toc: yes
+    number_sections: yes
+    includes:
+       in_header: TrailAnalytics_TFM_Joraddo.html
+    runtime: shiny
+  word_document:
+    toc: yes
+    number_sections: yes
+  pdf_document:
+    latex_engine: xelatex
+    toc: yes
+    number_sections: yes
+geometry: a4paper, left=2cm, right=2cm, top=3cm, bottom=3cm
+editor_options:
+  markdown:
+  wrap: 72
+      
+---
+
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir = "/Users/Jordi",echo = TRUE)
+```
+
+\clearpage
+
+#**Librerias necesarias.**
+
+```{r Instalación de librerias necesarias}
+if (!require("VIM")) {
+  install.packages("VIM")
+}
+if (!require("missForest")) {
+  install.packages("missForest")
+}
+if (!require("plotly")) {
+  install.packages("plotly")
+}
+if (!require("tidyverse")) {
+  install.packages("tidyverse")
+}
+if (!require("lubridate")) {
+  install.packages("lubridate")
+}
+if (!require("ggeffects")) {
+  install.packages("ggeffects")
+}
+if (!require("sjPlot")) {
+  install.packages("sjPlot")
+}
+if (!require("tinytex")) {
+  install.packages("tinytex")
+}
+
+library(dplyr)
+library(lubridate)
+library(ggplot2)
+library(scales)
+library(plotly)
+library(tidyverse)
+library(lubridate)
+library(missForest)
+library(VIM)
+library(corrplot)
+library(reshape2)
+library(lme4)
+library(quantreg)
+library(ggeffects)
+library(sjPlot)
+
+library(plotly)
+library(performance)
+
+library(shiny)
+library(mgcv)
+
+#remove.packages("devtools")
+#installed.packages()
+```
+
+# **Extracción y análisis de los datos de strava**
+
+## Carga de dataset activities.csv : Actividades del corredor.
+
+```{r Data upload: activities.csv}
+
+Activities_AN <- read.csv("~/Documents/Datos/Exportacion_noviembre/activities_12005698.csv",
+                          stringsAsFactor=TRUE, sep=",")
+Activities_BC <- read.csv("~/Documents/Datos/Exportacion_noviembre/activities_39779781.csv",
+                          stringsAsFactor=TRUE, sep=",")
+Activities_IB <- read.csv("~/Documents/Datos/Exportacion_noviembre/activities_57717801.csv",
+                          stringsAsFactor=TRUE, sep=",")
+Activities_JA <- read.csv("~/Documents/Datos/Exportacion_noviembre/activities_106331448.csv",
+                          stringsAsFactor=TRUE, sep=",")
+Activities_JP <- read.csv("~/Documents/Datos/Exportacion_noviembre/activities_21875774.csv",
+                          stringsAsFactor=TRUE, sep=",")
+Activities_LJ <- read.csv("~/Documents/Datos/Exportacion_noviembre/activities_63055946.csv",
+                          stringsAsFactor=TRUE, sep=",")
+Activities_MB <- read.csv("~/Documents/Datos/Exportacion_noviembre/activities_73163720.csv",
+                          stringsAsFactor=TRUE, sep=",")
+Activities_NC <- read.csv("~/Documents/Datos/Exportacion_noviembre/activities_36944607.csv",
+                          stringsAsFactor=TRUE, sep=",")
+Activities_NP <- read.csv("~/Documents/Datos/Exportacion_noviembre/activities_49973975.csv",
+                          stringsAsFactor=TRUE, sep=",")
+Activities_RC <- read.csv("~/Documents/Datos/Exportacion_noviembre/activities_21939621.csv",
+                          stringsAsFactor=TRUE, sep=",")
+Activities_VS <- read.csv("~/Documents/Datos/Exportacion_noviembre/activities_85112912.csv",
+                          stringsAsFactor=TRUE, sep=",")
+
+```
+
+## Carga de datset profile.csv : Info general sobre el corredor.
+
+```{r Data upload: profile.csv}
+
+Profile_AN <- read.csv("~/Documents/Datos/Exportacion_noviembre/profile_12005698.csv",
+                       stringsAsFactor=TRUE, sep=",")
+Profile_BC <- read.csv("~/Documents/Datos/Exportacion_noviembre/profile_39779781.csv",
+                       stringsAsFactor=TRUE, sep=",")
+Profile_IB <- read.csv("~/Documents/Datos/Exportacion_noviembre/profile_57717801.csv",
+                       stringsAsFactor=TRUE, sep=",")
+Profile_JA <- read.csv("~/Documents/Datos/Exportacion_noviembre/profile_106331448.csv",
+                       stringsAsFactor=TRUE, sep=",")
+Profile_JP <- read.csv("~/Documents/Datos/Exportacion_noviembre/profile_21875774.csv",
+                       stringsAsFactor=TRUE, sep=",")
+Profile_LJ <- read.csv("~/Documents/Datos/Exportacion_noviembre/profile_63055946.csv",
+                       stringsAsFactor=TRUE, sep=",")
+Profile_MB <- read.csv("~/Documents/Datos/Exportacion_noviembre/profile_73163720.csv",
+                       stringsAsFactor=TRUE, sep=",")
+Profile_NC <- read.csv("~/Documents/Datos/Exportacion_noviembre/profile_36944607.csv",
+                       stringsAsFactor=TRUE, sep=",")
+Profile_NP <- read.csv("~/Documents/Datos/Exportacion_noviembre/profile_49973975.csv",
+                       stringsAsFactor=TRUE, sep=",")
+Profile_RC <- read.csv("~/Documents/Datos/Exportacion_noviembre/profile_21939621.csv",
+                       stringsAsFactor=TRUE, sep=",")
+Profile_VS <- read.csv("~/Documents/Datos/Exportacion_noviembre/profile_85112912.csv",
+                       stringsAsFactor=TRUE, sep=",")
+```
+
+## Análisis inicial de los datasets propuestos.
+
+```{r Initial analysis of the datasets}
+#summary(Activities_JA)
+structure_Activities = str(Activities_JA)
+
+#summary(Activities_JA)
+structure_Profile = str(Profile_JA)
+
+```
+
+Tal y como podemos ver, tomamos como base del presente estudio dos datatsets, el primero relacionado con las actividades practicadas por cada atleta donde localizamos cerca de 100 dimensiones o columnas disponibles, estas versan sobre métricas fisiológicas básicas y avanzadas. Por su parte, el segundo es simplemente la información principal del perfil del corredor, siendo  poseedor de 12 columnas.Todo y que de este último no vamos a utilizar ningún dato que pueda identificar o comprometer visiblemente al atleta, velando por una mayor seguridad de los datos a la hora de tratarlos desde este entorno,hemos obtado por anonimizarlo mediante uso de pseudónimos. 
+
+Contamos entonces con un conjunto de 11 datasets de activities y 11 de profile procedentes de 11 corredores (incluido yo) correspondientes a ambos géneros (7 hombres y 4 mujeres), los cuales vamos a proceder a tratar y fusionar en uno para su posterior análisis.Con ello, se consigue información de distintos tipos de corredores, esto es, corredores de corta, media e incluso ultradistancia y además incluyendo peculiaridades y retos asociados que han desempeñado durante estos años.
+
+
+# **Preparación y limpieza de los datos**
+
+Tras una primera inspección de los datasets notamos que el nombre de las columnas están en distinto idioma para algunos corredores.
+
+```{r Changing the lenguage of the dataset 1}
+#Generamos una estructura para establecer este mapeo en ambos datasets.
+
+mapping_Activities_Type_es_en <- c(
+  "ID.de.actividad" = "Activity.ID",
+  "Fecha.de.la.actividad" = "Activity.Date",
+  "Nombre.de.la.actividad" = "Activity.Name",
+  "Tipo.de.actividad" = "Activity.Type",
+  "Descripción.de.la.actividad" = "Activity.Description",
+  "Tiempo.transcurrido" = "Elapsed.Time",
+  "Distancia" = "Distance",
+  "Ritmo.cardiaco.máximo" = "Max.Heart.Rate",
+  "Esfuerzo.Relativo" = "Relative.Effort",
+  "Desplazamiento" = "Commute",
+  "Nota.privada.de.actividad" = "Activity.Private.Note",
+  "Equipamiento.de.la.actividad" = "Activity.Gear",
+  "Nombre.del.archivo" = "Filename",
+  "Peso.del.deportista" = "Athlete.Weight",
+  "Peso.de.la.bicicleta" = "Bike.Weight",
+  "Tiempo.transcurrido.1" = "Elapsed.Time.1",
+  "Tiempo.en.movimiento" = "Moving.Time",
+  "Distancia.1" = "Distance.1",
+  "Velocidad.máxima" = "Max.Speed",
+  "Velocidad.promedio" = "Average.Speed",
+  "Desnivel.positivo" = "Elevation.Gain",
+  "Desnivel.negativo" = "Elevation.Loss",
+  "Desnivel.bajo" = "Elevation.Low",
+  "Desnivel.alto" = "Elevation.High",
+  "Pendiente.máxima" = "Max.Grade",
+  "Pendiente.promedio" = "Average.Grade",
+  "Pendiente.positiva.promedio" = "Average.Positive.Grade",
+  "Pendiente.negativa.promedio" = "Average.Negative.Grade",
+  "Cadencia.máx." = "Max.Cadence",
+  "Cadencia.promedio" = "Average.Cadence",
+  "Ritmo.cardiaco.máximo.1" = "Max.Heart.Rate.1",
+  "Ritmo.cardiaco.promedio" = "Average.Heart.Rate",
+  "Vatios.máx." = "Max.Watts",
+  "Vatios.promedio" = "Average.Watts",
+  "Calorías" = "Calories",
+  "Temperatura.máx." = "Max.Temperature",
+  "Temperatura.promedio" = "Average.Temperature",
+  "Esfuerzo.Relativo.1" = "Relative.Effort.1",
+  "Trabajo.total" = "Total.Work",
+  "Número.de.carreras" = "Number.of.Runs",
+  "Tiempo.en.ascenso" = "Uphill.Time",
+  "Tiempo.en.descenso" = "Downhill.Time",
+  "Otro.tiempo" = "Other.Time",
+  "Esfuerzo.Percibido" = "Perceived.Exertion",
+  "Tipo" = "Type",
+  "Hora.de.inicio" = "Start.Time",
+  "Potencia.promedio.ponderada" = "Weighted.Average.Power",
+  "Recuento.de.potencia" = "Power.Count",
+  "Usar.Esfuerzo.Percibido" = "Prefer.Perceived.Exertion",
+  "Esfuerzo.Relativo.percibido" = "Perceived.Relative.Effort",
+  "Desplazamiento.1" = "Commute.1",
+  "Peso.total.levantado" = "Total.Weight.Lifted",
+  "Desde.la.carga" = "From.Upload",
+  "Distancia.ajustada.en.pendientes" = "Grade.Adjusted.Distance",
+  "Hora.de.observación.meteorológica" = "Weather.Observation.Time",
+  "Condición.meteorológica" = "Weather.Condition",
+  "Temperatura.meteorológica" = "Weather.Temperature",
+  "Temperatura.aparente" = "Apparent.Temperature",
+  "Punto.de.rocío" = "Dewpoint",
+  "Humedad" = "Humidity",
+  "Presión.meteorológica" = "Weather.Pressure",
+  "Velocidad.del.viento" = "Wind.Speed",
+  "Ráfaga.de.viento" = "Wind.Gust",
+  "Dirección.del.viento" = "Wind.Bearing",
+  "Intensidad.de.precipitación" = "Precipitation.Intensity",
+  "Hora.del.amanecer" = "Sunrise.Time",
+  "Hora.del.atardecer" = "Sunset.Time",
+  "Fase.lunar" = "Moon.Phase",
+  "Bicicleta" = "Bike",
+  "Equipamiento" = "Gear",
+  "Probabilidad.de.precipitación" = "Precipitation.Probability",
+  "Tipo.de.precipitación" = "Precipitation.Type",
+  "Nubosidad" = "Cloud.Cover",
+  "Visibilidad.meteorológica" = "Weather.Visibility",
+  "Índice.UV" = "UV.Index",
+  "Ozono.meteorológico" = "Weather.Ozone",
+  "Recuento.de.saltos" = "Jump.Count",
+  "Grit.total" = "Total.Grit",
+  "Flow.promedio" = "Average.Flow",
+  "Denunciado" = "Flagged",
+  "Velocidad.promedio.durante.el.tiempo.transcurrido" = "Average.Elapsed.Speed",
+  "Distancia.en.tierra" = "Dirt.Distance",
+  "Distancia.recientemente.explorada" = "Newly.Explored.Distance",
+  "Distancia.en.rampas.de.tierra.recientemente.explorada" = "Newly.Explored.Dirt.Distance",
+  "Recuento.de.actividades" = "Activity.Count",
+  "Total.de.pasos" = "Total.Steps",
+  "Ahorro.en.carbono" = "Carbon.Saved",
+  "Largo.de.la.piscina" = "Pool.Length",
+  "Carga.de.entrenamiento" = "Training.Load",
+  "Intensidad" = "Intensity",
+  "Ritmo.ajustado.en.pendientes.promedio" = "Average.Grade.Adjusted.Pace",
+  "Tiempo.cronometrado" = "Timer.Time",
+  "Ciclos.en.total" = "Total.Cycles",
+  "Recuperación" = "Recovery",
+  "Con.mascota" = "With.Pet",
+  "Competición" = "Competition",
+  "Carrera.de.larga.distancia" = "Long.Run",
+  "Por.una.causa" = "For.a.Cause",
+  "Multimedia" = "Media"
+)
+
+
+mapping_Profile_es_en <- c(
+  "ID.de.deportista" = "Athlete.ID",
+  "Dirección.de.correo" = "Email.Address",
+  "Nombre" = "First.Name",
+  "Apellidos" = "Last.Name",
+  "Género" = "Sex",
+  "Descripción" = "Description",
+  "Peso" = "Weight",
+  "Ciudad" = "City",
+  "Provincia" = "State",
+  "País" = "Country",
+  "Estado.del.consentimiento.sanitario" = "Health.Consent.Status",
+  "Fecha.de.aprobación.denegación.del.consentimiento.sanitario" 
+   = "Date.of.Health.Consent.approval.denial"
+)
+
+
+# Renombrar dataset Activities y mapear algunas de sus columnas.
+
+  #Generamos lista con datasets a renombrar.
+
+  list_Activities_E <- list(
+  Activities_RC, Activities_NC, Activities_MB, Activities_JP, Activities_BC,
+  Activities_AN
+  )
+  
+  #Generamos función para renombrarlo y mapearlo.
+  
+  rename_with_map <- function(df, map) {
+  names(df) <- ifelse(
+    names(df) %in% names(map),
+    map[names(df)],
+    names(df)
+  )
+  return(df)
+  }
+  
+  #Aplicamos función anterior sobre la lista de ficheros de actividades erróneos.
+  list_Activities_renamed <- lapply(list_Activities_E, rename_with_map, 
+                                    map = mapping_Activities_Type_es_en)
+ 
+  #Rescatamos los datasets correspondientes. 
+  Activities_RC <- list_Activities_renamed[[1]]
+  Activities_NC <- list_Activities_renamed[[2]]
+  Activities_MB <- list_Activities_renamed[[3]]
+  Activities_JP <- list_Activities_renamed[[4]]
+  Activities_BC <- list_Activities_renamed[[5]]
+  Activities_AN <- list_Activities_renamed[[6]]
+  
+
+# Renombrar dataset Profile
+
+    #Generamos lista con datasets a renombrar.
+
+  list_Profile_E <- list(
+  Profile_RC, Profile_NC,Profile_MB, Profile_JP, Profile_BC,
+  Profile_AN
+  )
+  
+  #Aplicamos función anterior sobre la lista de ficheros de actividades erróneas.
+  list_Profile_renamed <- lapply(list_Profile_E, rename_with_map,
+                                 map = mapping_Profile_es_en)
+  
+  #Rescatamos los datasets correspondientes.
+  
+  Profile_RC <- list_Profile_renamed[[1]]
+  Profile_NC <- list_Profile_renamed[[2]]
+  Profile_MB <- list_Profile_renamed[[3]]
+  Profile_JP <- list_Profile_renamed[[4]]
+  Profile_BC <- list_Profile_renamed[[5]]
+  Profile_AN <- list_Profile_renamed[[6]]
+  
+```
+
+Además también debemos de traducir el contenido de algunas columnas de ambos datasets, como la columna Tipo de actividad, fecha o Sex o incluso las variables decimales, las cuales tendrán separadores distintos "." o ",".Procedemos bajo la misma operativa utilizada anteriormente.
+```{r Changing the lenguage of the dataset 2}
+
+  #Mapeo de actividades
+
+  Activities_Types_map <- c(
+  "Bicicleta" = "Ride",
+  "Bicicleta virtual" = "Virtual Ride",
+  "Caminata" = "Walk",
+  "Carrera" = "Run",
+  "Crossfit" = "Crossfit",
+  "Elíptica" = "Elliptical",
+  "Entrenamiento" = "Workout",
+  "Entrenamiento con pesas" = "Weight Training",
+  "Escalada" = "Climbing",
+  "Escaleras" = "Stairs",
+  "Kayak" = "Kayaking",
+  "Esquí de fondo" = "Cross-country Skiing",
+  "Natación" = "Swimming",
+  "Raquetas de nieve" = "Snowshoeing",
+  "Senderismo" = "Hike",
+  "Snowboard" = "Snowboarding",
+  "Surf" = "Surfing",
+  "Surf de remo" = "Stand-up Paddleboarding",
+  "Yoga" = "Yoga"
+  )  
+
+
+  Activities_Type_T <- lapply(list_Activities_renamed, function(df) {
+    df$Activity.Type <- ifelse(trimws (df$Activity.Type) %in% trimws(names(Activities_Types_map)),
+                    Activities_Types_map[trimws(df$Activity.Type)],
+                    df$Activity.Type)
+    df
+  })
+
+  
+  # Rescatamos los datasets correspondientes.
+
+    Activities_RC <- Activities_Type_T[[1]]
+    Activities_NC <- Activities_Type_T[[2]]
+    Activities_MB <- Activities_Type_T[[3]]
+    Activities_JP <- Activities_Type_T[[4]]
+    Activities_BC <- Activities_Type_T[[5]]
+    Activities_AN <- Activities_Type_T[[6]]
+
+#Traducimos la columna Género para el dataset "Profile"
+  
+   Profile_Sex_map <- c(
+  "Hombre" = "Male",
+  "Mujer" = "Female"
+  )
+  
+    Profile_Sex_T <- lapply(list_Profile_renamed, function(df) {
+    df$Sex <- ifelse(trimws(df$Sex) %in% trimws(names(Profile_Sex_map)),
+                    Profile_Sex_map[trimws(df$Sex)],
+                    df$Sex)
+    df
+  })
+
+  # Rescatamos los datasets correspondientes.
+
+    Profile_RC <- Profile_Sex_T[[1]]
+    Profile_NC <- Profile_Sex_T[[2]]
+    Profile_MB <- Profile_Sex_T[[3]]
+    Profile_JP <- Profile_Sex_T[[4]]
+    Profile_BC <- Profile_Sex_T[[5]]
+    Profile_AN <- Profile_Sex_T[[6]] 
+   
+    #Unificamos formato de los valores decimales que tengan el separadaor "," y no "." para el campo Distancia.
+    
+    Activities_RC[["Distance"]] <- as.numeric(gsub(",", ".", Activities_RC[["Distance"]]))
+    Activities_NC[["Distance"]] <- as.numeric(gsub(",", ".", Activities_NC[["Distance"]]))
+    Activities_MB[["Distance"]] <- as.numeric(gsub(",", ".", Activities_MB[["Distance"]]))
+    Activities_JP[["Distance"]] <- as.numeric(gsub(",", ".", Activities_JP[["Distance"]]))
+    Activities_BC[["Distance"]] <- as.numeric(gsub(",", ".", Activities_BC[["Distance"]]))
+    Activities_AN[["Distance"]] <- as.numeric(gsub(",", ".", Activities_AN[["Distance"]]))
+    
+```
+
+Otro aspecto que deberemos de tener en cuenta previo a la integración es la unificación del formato de la fecha para ambos datasets.
+
+```{r Unification of date format}
+# Definimos funciones de conversión
+
+convert_format_english <- function(x) {
+  
+  x <- trimws(x)              #Posibles espacios
+  x <- gsub("\\s+", " ", x)   #Carácteres raros
+  dt <- mdy_hms(x, locale = "en_US.UTF-8")
+  
+  format(dt, "%d-%m-%Y, %H:%M:%S")
+}
+
+convert_format_spanish <- function(x) {
+  
+  x <- trimws(x)                      #Posibles espacios
+  x <- gsub("\\s+", " ", x)           #Carácteres raros
+  dt <- dmy_hms(x, locale = "es_ES")
+  
+  format(dt, "%d-%m-%Y, %H:%M:%S")    # Formatear al formato solicitado
+
+}
+ 
+#Aplicación de las funciones de conversión entre los datasets correspondientes.
+
+# lista_english -- formato "Oct 12, 2022, 5:10:15 PM". Aquí entrarán el resto de datasets no procesados anteriormente.
+lista_english <- list(Activities_IB,Activities_JA,Activities_LJ,Activities_NP,Activities_VS)
+
+for (i in seq_along(lista_english)) {
+  lista_english[[i]]$Activity.Date <- convert_format_english(lista_english[[i]]$Activity.Date)
+}
+
+  # Rescatamos y sobreescribimos los datasets correspondientes.
+
+    Activities_IB <- lista_english[[1]]
+    Activities_JA <- lista_english[[2]]
+    Activities_LJ <- lista_english[[3]]
+    Activities_NP <- lista_english[[4]]
+    Activities_VS <- lista_english[[5]]
+
+
+# lista_spanish -- formato "3 nov 2015, 9:15:59". Aquí entrarán los datasets que hemos procesado y renombrado anteriormente.
+lista_spanish <- list(Activities_RC, Activities_NC, Activities_MB, Activities_JP, Activities_BC,
+  Activities_AN)
+
+for (i in seq_along(lista_spanish)) {
+  lista_spanish[[i]]$Activity.Date <- convert_format_spanish(lista_spanish[[i]]$Activity.Date)
+}
+
+  # Rescatamos y sobreescribimos los datasets correspondientes.
+
+    Activities_RC <- lista_spanish[[1]]
+    Activities_NC <- lista_spanish[[2]]
+    Activities_MB <- lista_spanish[[3]]
+    Activities_JP <- lista_spanish[[4]]
+    Activities_BC <- lista_spanish[[5]]
+    Activities_AN <- lista_spanish[[6]]
+
+```
+
+```{r PRUEBAS 2 }
+
+```
+
+## Integración
+
+Añadimos la columna con el identificador único del corredor que conocemos el cual nos servirá de enlace para el otro fichero.
+
+```{r Add Athlete.Id column}
+Activities_AN$Athlete.ID <- 12005698
+Activities_BC$Athlete.ID <- 39779781
+Activities_IB$Athlete.ID <- 57717801
+Activities_JA$Athlete.ID <- 106331448
+Activities_JP$Athlete.ID <- 21875774
+Activities_LJ$Athlete.ID <- 63055946
+Activities_MB$Athlete.ID <- 73163720
+Activities_NC$Athlete.ID <- 36944607
+Activities_NP$Athlete.ID <- 49973975
+Activities_RC$Athlete.ID <- 21939621
+Activities_VS$Athlete.ID <- 85112912
+
+```
+
+Integramos en el fichero de activities el género del corredor@
+```{r Bind activities.csv AND profile.csv}
+# Listas con datasets de actividades y de perfiles
+Activities_list <- list(Activities_AN, Activities_BC, Activities_IB,Activities_JA,Activities_JP,Activities_LJ,Activities_MB,Activities_NC,Activities_NP,Activities_RC,Activities_VS) 
+
+Profiles_list   <- list(Profile_AN, Profile_BC, Profile_IB,Profile_JA,Profile_JP,Profile_LJ,Profile_MB,Profile_NC,Profile_NP,Profile_RC,Profile_VS)          
+
+# Lista vacía para guardar resultados
+merged_list <- vector("list", length(Activities_list))
+
+# Iterar sobre todos los pares
+for (i in seq_along(Activities_list)) {
+  merged_list[[i]] <- merge(
+    Activities_list[[i]],
+    Profiles_list[[i]][, c("Athlete.ID", "Sex")],
+    by = "Athlete.ID",
+    all.x = TRUE    # mantiene todas las actividades
+  )
+}
+
+#Rescatamos los datasets correspondientes ya combinados.
+
+ActivitiesCombined_AN <- merged_list[[1]]
+ActivitiesCombined_BC <- merged_list[[2]]
+ActivitiesCombined_IB <- merged_list[[3]]
+ActivitiesCombined_JA <- merged_list[[4]]
+ActivitiesCombined_JP <- merged_list[[5]]
+ActivitiesCombined_LJ <- merged_list[[6]]
+ActivitiesCombined_MB <- merged_list[[7]]
+ActivitiesCombined_NC <- merged_list[[8]]
+ActivitiesCombined_NP <- merged_list[[9]]
+ActivitiesCombined_RC <- merged_list[[10]]
+ActivitiesCombined_VS <- merged_list[[11]]
+
+```
+
+Por último , una vez con todos los datasets alineados, los fusionamos en uno único para disponer de los datos unificados.
+
+```{r Dataset fusion}
+# Creamos lista con todos los datasets combinados.
+CombinedDS_list <- list(ActivitiesCombined_AN, ActivitiesCombined_BC, ActivitiesCombined_IB, ActivitiesCombined_JA, ActivitiesCombined_JP, ActivitiesCombined_LJ, ActivitiesCombined_MB, ActivitiesCombined_NC, ActivitiesCombined_NP, ActivitiesCombined_RC, ActivitiesCombined_VS)
+
+#Convertimos las columnas de tipo factor a tipo character para evitar problemas con el fusionado.
+CombinedDS_list <- lapply(CombinedDS_list, function(df) {
+  df[] <- lapply(df, function(col) {
+          if (is.factor(col)) as.character(col) 
+          else col
+        }
+        )
+  df
+})
+
+# Unimos o fusionamos los datasets mediante la llamada a la funcciónn rbind()
+Activities_integred <- do.call(rbind, CombinedDS_list)
+
+#Tras revisar el dataset fusionado notamos que una variable se nos ha quedado en tipo caracter, la pasamos a numérica.
+Activities_integred$Distance <- as.numeric(Activities_integred$Distance)
+```
+
+```{r PRUEBAS 3}
+
+```
+
+## Selección
+
+1.- Existen datasets de corredores que han registrado actividades que no tienen relación directa/indirecta con la preparación para Trail Running: natacion, padel... Deberemos de excluirlas.
+
+```{r Selection 1}
+#Mostramos los tipos actuales.
+unique(Activities_integred$Activity.Type )
+
+#Generamos lista con las activiades a excluir.
+Activity_Types_Excl <- list("Swimming","Yoga","Crossfit","Stair-Stepper","Kayaking","Stairs","Swim","Stand Up Paddling","Surfing","Stand-up Paddleboarding","Snowboarding","Climbing","Snowshoeing")
+
+# Excluimos aquellas actividades relacionadas con deportes de raqueta como Pádel.
+Activities_integred <- Activities_integred[!grepl("Pádel", Activities_integred$Activity.Name, ignore.case = TRUE), ]
+
+# Excluimos actividades que no tengan que ver con el estudio.
+Activities_integred <- Activities_integred[!(Activities_integred$Activity.Type %in% Activity_Types_Excl), ]
+  
+``` 
+
+2.- Deberemos de establecer dos criterios paras filtrar la información dispuesta.Cada dataset data de una fecha de inicio y fin de actividades distinta. A modo de estandarización vamos a establecer y quedarnos con el mismo rango de fechas para todos los datasets.
+
+```{r Selection 2}
+# Rango de fechas
+start_date <- as.Date("2020-11-01")
+end_date   <- as.Date("2025-11-01")
+  
+#Convertimos  Activity.Date a fecha-hora (eliminando la coma) para evitarnos problemas de conversión.
+Activities_integred$ActivityDT <- parse_date_time(gsub(",", "", Activities_integred$Activity.Date),
+                                 orders = "dmy HMS")
+
+#Creamos columna solo para fecha (tipo Date) y otra para la parte horaria.
+Activities_integred$Activity.Date_Date <- as.Date(Activities_integred$ActivityDT)
+  
+Activities_integred$Activity.Date_Time <- format(Activities_integred$ActivityDT, "%H:%M:%S")
+
+#Quitamos la columna intermedia. Ya no nos vale.
+Activities_integred <- Activities_integred %>% select(-ActivityDT)
+
+#Creamos un nuevo dataset resultante filtrado.
+Activities_final_selected <-  Activities_integred %>%
+                                filter(Activity.Date_Date >= start_date, Activity.Date_Date <= end_date)
+```
+
+```{r PRUEBAS 4}
+
+#write.csv(Activities_final_Analysis, "Activities_final_Analysis.csv", row.names = FALSE)
+
+```
+
+## Reducción de la dimensionalidad
+Deberemos de realizar un estudio de las columnas que disponemos y quedarnos sólamente con las que sean necesarias bajo el criterio de estudio , o bien estén en condiciones aceptables para este.
+
+```{r Dimensionality reduction}
+#Columnas excluidas bajo criterio de estudio.
+cols_excl_CE <- c(  "Activity.Name","Activity.Description","Commute","Activity.Private.Note","Filename","Bike.Weight","Elapsed.Time.1",
+                    "Distance.1","Max.Heart.Rate.1","Relative.Effort.1","Number.of.Runs","Other.Time","Type","Commute.1","From.Upload",
+                    "Grade.Adjusted.Distance","Sunrise.Time","Sunset.Time","Bike","Gear","Jump.Count","Total.Grit","Average.Flow",
+                    "Flagged","Dirt.Distance","Newly.Explored.Distance","Newly.Explored.Dirt.Distance","Activity.Count","Carbon.Saved",
+                    "Pool.Length","Total.Cycles","With.Pet","Competition","Long.Run","For.a.Cause","Media"
+                )
+
+Activities_final_reduced <- Activities_final_selected[ , !(names(Activities_final_selected) %in% cols_excl_CE)]
+
+```
+
+## Limpieza
+Vamos en busca de las distintos tipos de inconsistencias que nos podemos encontrar:
+
+### Valores no definidos.
+Estudiamos los valores vacíos o nulos en el conjunto de datos:
+
+```{r Create table of empty values }
+#Empleamos un dataframe a modo de tabla para estudiar el porcentaje de columnas vacías o nulas que existen.
+
+table_NA_Empty <- data.frame(
+  Variable = names(Activities_final_reduced),
+  Total = sapply(Activities_final_reduced, function(x) length(x)),
+  NA_count = sapply(Activities_final_reduced, function(x) sum(is.na(x))),
+  Empty_count = sapply(Activities_final_reduced, function(x) sum(x == "", na.rm = TRUE))
+  #stringsAsFactors = FALSE
+)
+
+# Añadimos cálculo de porcentajes una vez calculados los totales.
+table_NA_Empty$Pct_NA <- round(table_NA_Empty$NA_count / table_NA_Empty$Total * 100, 2)
+table_NA_Empty$Pct_Empty <- round(table_NA_Empty$Empty_count / table_NA_Empty$Total * 100, 2)
+
+rownames(table_NA_Empty) <- NULL #Quitamos los nombres de las columnas para que aparezcan números y sea más legible posteriormente.
+
+table_NA_Empty
+
+```
+
+Analizando la tabla generada anteriormente:
+
+Notamos como prácticamente ninguna variable de estudio a excepción de "Activity.Gear" tiene valores vacíos, no obstante no podemos decir lo mismo para los valores NA. Deberemos de atender a un criterio de porcentaje, y segmentar o clasificar las variables entre (Buenas, medias o malas) para luego tomar las opciones pertinentes.
+
+En primer lugar presentamos las variables con mayor porcentaje de valores NA (rango de 80%  a 100%). Resultan un total de 38 columnas.
+```{r Worst columns}
+Worst_Cols_pct <- table_NA_Empty %>% filter(Pct_NA>=80 | Pct_Empty >=80) %>% select(Variable, Pct_NA,NA_count)
+Worst_Cols_pct
+```
+
+Observamos un conjunto de atributos que son propios de cada corredor, siendo la gran parte casi imposible de averiguar de manera trivial (Max.Watts,Max.Temperature,Uphill.Time,Downhill.Time,Total.Weight.Lifted,Perceived.Exertion,Perceived.Relative.Effort,	
+Recovery,Intensity,Weighted.Average.Power,Power.Count), aún así contamos con algunos casos especiales:
+
+-Athlete.Weight: el peso del corredor lo podríamos averiguar ya que está informado en el dataset "Profile" fusionado anteriormente, ahora bien, consideramos no hacerlo ya que ese valor no muestra/asegura realmente el peso del atleta a la hora de realizar la actividad, más bien es un valor orientativo informado por el atleta al empezar a usar strava y cuyo mantenimiento es manual.
+
+-start.time: segun el conocimiento tras el uso del aplicativo podemos corroborar que el atributo Activity.Date corresponde a la fecha que se realizó (empezó) la actividad, encontrándose este en formato completo de fecha-hora.Presenta 100% de disponibilidad. Así pues la podemos obviar sin problema. 
+
+- Timer.Time: De manera homóloga al caso anterior también disponemos de otra variable que puede suplir a esta, hablamos de elapsed.time con un 100% de disponibilidad.
+
+También contamos con algunos atributos calculables a partir de otros:
+
+-Average.Positive.Grade, Average.Negative.Grade: Para estas dos hace falta el desnivel positivo y negativo acumulado junto con la distancia en ascenso y descenso. Al no tener disponible la segunda no podemos tratar de calcularlo.
+
+-Total.Work : Podemos calcularla en base a la potencia generada, pero también la desconocemos.
+
+-Training.Load : Puede resultar de la duración multiplicada por la intensidad relativa, pero desconocemos la segunda.
+
+Por último contamos con una serie de variables relacionadas con el tiempo meterológico que acumulan cerca del 100% de valores NA. Podríamos tratar de recuperarlo en caso de disponer la ubicación donde se registra la actividad junto a la fecha y hora de la misma haciendo uso de otro dataset que nos proporcione información meterológica. No disponemos de la primera variable mencionada por lo que tendremos que ignorar los atributos, pues no nos aportan nada de esta manera.
+
+```{r Clean Worst columns}
+Activities_final_cleaned_WC <- Activities_final_reduced[, -which(colMeans(is.na(Activities_final_reduced)) > 0.80)]
+```
+
+Si bien el alto porcentaje de NA localizados en este rango de variables reduce las operaciones a realizar para poder recuperarlas, también nos hemos encontrado con impedimentos a la hora de tratar de calcularlas por no disponer tampoco de otras relacionadas. Por su parte también hemos podido recuperar otras que ya se informaban en otras variables relacionadas.El resultado final ha sido excluirlas del estudio.
+
+
+Marcamos un rango en [40% - 80%] columnas con un porcentaje medio o moderado de valores NA. 3 columnas
+```{r Medium columns}
+Medium_Cols_pct <- table_NA_Empty %>% filter((Pct_NA>=40 & Pct_NA<80 )) %>% select(Variable, Pct_NA,NA_count)
+Medium_Cols_pct
+```
+
+Dentro de este rango sólamente tenemos 3 variables, las citamos por orden de mayor a menor porcentaje de perdidos:
+
+-Average.Grade.Adjusted.Pace: Resulta bastante complejo de calcular ya que hace uso de la pendiente observada en cada uno de los puntos de la ruta por donde se ha registrado la actividad. Buscando la alternativa de completado, dado el caso, tampoco vale la pena completarla con un valor global o a partir de una mediana general debido a su alto porcentaje de NA. Se trata de una variable rica en cuanto a información, pero en este caso, más bien añade ruido. La excluiremos.
+
+- Total.Steps: La falta de información en este campo obedece a que este indicador es útil o se informa solamente en actividades de tipo "senderismo",asimismo conforme se registra una actividad de tipo "carrera", ya entran en juego otras métricas asociadas más apropiadas. Ya que vamos a basar el estudio principalmente en carreras, no vemos necesaria calcularla y la podremos excluir.
+
+- Prefer.Perceived.Exertion: se trata de una variable con tipología booleana, la cual se encarga de indicar si el corredor ha querido utilizar todo el esfuerzo que realmente podía dar. Tiene relación directa con "Perceived Exertion" y esta la hemos incluido dentro del grupo de peores columnas. Un posible motivo por el que tenemos una gran parte de NA es a que este valor no se informa directamente desde la versión del aplicativo móvil,más bien web y los corredores implicados hacen uso del dispositivo móvil buscando la comodidad. Se ha tratado de buscar información sobre la heurística asociada al cáculo, pero sin éxito. No se trata de un valor que fácilmente pueda extrapolarse o completar con el conjunto de los otros. Valoramos la opción de dejarlo en el estudio de momento dado su moderado y no excesivo número de NA.
+
+```{r Clean Medium columns}
+Activities_final_cleaned_MC <- Activities_final_cleaned_WC[, -which(colMeans(is.na(Activities_final_cleaned_WC)) > 0.40 & colMeans(is.na(Activities_final_cleaned_WC))<0.80 & names(Activities_final_cleaned_WC) != "Prefer.Perceived.Exertion")]
+```
+
+Por último definimos entre [0%-40%] aquellas columnas óptimas para su estudio y análisis. 27 columnas
+```{r Best columns}
+Best_Cols_pct <- table_NA_Empty %>% filter((Pct_NA>=0 & Pct_NA<40 )) %>% select(Variable, Pct_NA,NA_count)
+Best_Cols_pct
+```
+
+En este grupo deberíamos tener a las mejores variables, digo debería puesto que aún no hemos analizado el valor de las variables en sí. De entre el conjunto de 27 variables, 15 presentan algún tipo de valor faltante aunque con un porcentaje bastante bajo. Analizemos los casos particularmente de mayor a menor porcentaje de perdidos:
+
+
+-Variables Elevation.Gain,Max.Grade,Max.Speed,Average.Elapsed.Speed,Elevation.Loss,Elevation.Low,Elevation.High : Una variable que nos puede ayudar a completarlas es la distancia, si esta vale 0 no puede haberse hecho nada de desnivel ni tampoco ir a ninguna velocidad. Una vez hecho esto, analizamos el tipo de las actividades con desnivel positivo faltante para así determinar si se trata de alguna actividad indoor y poder descartar que pueda intervenir la variable. 
+
+```{r Create clon dataset - Activities_final_cleaned_BC }
+Activities_final_cleaned_BC <- Activities_final_cleaned_MC
+```
+
+```{r Elevation.Gain Exclusion1}
+Activities_final_cleaned_MC %>% filter(is.na(Elevation.Gain)& Distance==0)%>% count() %>% print()
+Activities_final_cleaned_BC$Elevation.Gain[ Activities_final_cleaned_BC$Distance == 0 &is.na(Activities_final_cleaned_BC$Elevation.Gain) ] <- 0
+```
+Para Elevation.Gain del total de 116 valores perdidos, 95 tenemos la certeza de que toman valor 0 ya que su distancia para la actividad es 0.
+
+```{r Max.Grade Exclusion1}
+Activities_final_cleaned_MC %>% filter(is.na(Max.Grade)& Distance==0)%>% count()  %>% print()
+Activities_final_cleaned_BC$Max.Grade[ Activities_final_cleaned_BC$Distance == 0 &is.na(Activities_final_cleaned_BC$Max.Grade) ] <- 0
+```
+Para Max.Grade de los 147 valores vacíos, 114 se encuentran con la condición de distancia 0.
+
+```{r Max.Speed Exclusion1}
+Activities_final_cleaned_MC %>% filter(is.na(Max.Speed)& Distance==0)%>% count()  %>% print()
+Activities_final_cleaned_BC$Max.Speed[ Activities_final_cleaned_BC$Distance == 0 &is.na(Activities_final_cleaned_BC$Max.Speed) ] <- 0
+```
+Para Max.Speed encontramos bajo esta condición 130 de 163.
+
+```{r Average.Elapsed.Speed Exclusion1}
+Activities_final_cleaned_MC %>% filter(is.na(Average.Elapsed.Speed)& Distance==0)%>% count()%>% print()
+Activities_final_cleaned_BC$Average.Elapsed.Speed[ Activities_final_cleaned_BC$Distance == 0 &is.na(Activities_final_cleaned_BC$Average.Elapsed.Speed) ] <- 0
+```
+Para Average.Elapsed.Speed 399 de 1471.
+```{r Elevation.Loss Exclusion1}
+Activities_final_cleaned_MC %>% filter(is.na(Elevation.Loss)& Distance==0)%>% count() %>% print()
+Activities_final_cleaned_BC$Elevation.Loss[ Activities_final_cleaned_BC$Distance == 0 &is.na(Activities_final_cleaned_BC$Elevation.Loss) ] <- 0
+```
+Para Elevation.Loss 1415 de 1507.
+```{r Elevation.Low Exclusion1}
+Activities_final_cleaned_MC %>% filter(is.na(Elevation.Low)& Distance==0)%>% count()  %>% print()
+Activities_final_cleaned_BC$Elevation.Low[ Activities_final_cleaned_BC$Distance == 0 &is.na(Activities_final_cleaned_BC$Elevation.Low) ] <- 0
+```
+Para Elevation.Low 1470 de 1567.
+
+```{r Elevation.High Exclusion1}
+Activities_final_cleaned_MC %>% filter(is.na(Elevation.High)& Distance==0)%>% count()  %>% print()
+Activities_final_cleaned_BC$Elevation.High[ Activities_final_cleaned_BC$Distance == 0 &is.na(Activities_final_cleaned_BC$Elevation.High) ] <- 0
+```
+Para Elevation.High 1470 de 1567.
+ 
+Para todos estos casos podemos asumir un valor 0.
+
+
+Para el resto analizamos el tipo de las actividades:
+
+```{r Elevation.Gain x Activity.Type}
+Activities_final_cleaned_MC %>% filter(is.na(Elevation.Gain)& Distance!=0) %>% group_by(Activity.Type) %>%select(Activity.Type) %>% count() %>% print()
+```
+
+```{r Max.Grade x Activity.Type}
+Activities_final_cleaned_MC %>% filter(is.na(Max.Grade)& Distance!=0) %>% group_by(Activity.Type) %>%select(Activity.Type) %>% count() %>% print()
+```
+
+```{r Max.Speed x Activity.Type}
+Activities_final_cleaned_MC %>% filter(is.na(Max.Speed)& Distance!=0) %>% group_by(Activity.Type) %>%select(Activity.Type) %>% count() %>% print()
+```
+
+```{r Average.Elapsed.Speed x Activity.Type}
+Activities_final_cleaned_MC %>% filter(is.na(Average.Elapsed.Speed)& Distance!=0) %>% group_by(Activity.Type) %>%select(Activity.Type) %>% count() %>% print()
+```
+
+```{r Elevation.Loss x Activity.Type}
+Activities_final_cleaned_MC %>% filter(is.na(Elevation.Loss)& Distance!=0) %>% group_by(Activity.Type) %>%select(Activity.Type) %>% count() %>% print()
+```
+
+```{r Elevation.Low x Activity.Type}
+Activities_final_cleaned_MC %>% filter(is.na(Elevation.Low)& Distance!=0) %>% group_by(Activity.Type) %>%select(Activity.Type) %>% count() %>% print()
+```
+
+```{r Elevation.High x Activity.Type}
+Activities_final_cleaned_MC %>% filter(is.na(Elevation.High)& Distance!=0) %>% group_by(Activity.Type) %>%select(Activity.Type) %>% count() %>% print()
+```
+
+  -Virtual Ride,Elliptical : son actividades indoor por lo que podemos asumir un valor 0 para las variables  Elevation.Gain,Max.Grade,Elevation.Loss,Elevation.Low,Elevation.High
+
+```{r Elevation.Gain,Max.Grade,Elevation.Loss,Elevation.Low,Elevation.High - Acticity.Type: Virtual Ride,Elliptical.- Exclusion_2}
+
+columnas_exclusion2 <- c("Elevation.Gain", "Max.Grade","Elevation.Loss","Elevation.Low","Elevation.High")
+Acticity_Type <- c("Virtual Ride","Elliptical")
+
+for (col in columnas_exclusion2) {
+  Activities_final_cleaned_BC[Activities_final_cleaned_BC$Distance != 0 & Activities_final_cleaned_BC$Activity.Type %in% Acticity_Type, col] <- 0
+}
+
+```
+
+  -Hike,Ride: son actividades outdoor pero perfectamente se pueden tratar de actividades hechas en asfalto sin nada de montaña de por     medio.Podremos asumir el valor 0 para las 2 primeras variables relacionadas con la altitud . 
+  
+```{r Elevation.Gain,Max.Grade - Acticity.Type: Hike,Ride. - Exclusion_2}
+
+columnas_exclusion2 <- c("Elevation.Gain", "Max.Grade")
+Acticity_Type <- c("Hike","Ride")
+
+for (col in columnas_exclusion2) {
+  Activities_final_cleaned_BC[Activities_final_cleaned_BC$Distance != 0 & is.na(Activities_final_cleaned_BC[[col]]) & Activities_final_cleaned_BC$Activity.Type %in% Acticity_Type, col] <- 0
+}
+
+```
+  
+  -Run: tras revisarlas y dado el conocimiento del dataset, concluimos que se tratan de actividades que como hemos comentado en el punto    anterior, son carreras realizadas en asfalto sin desnivel de por medio. Asumimos pues valor 0 para las variables Elevation.Gain,Max.Grade,Elevation.Loss,Elevation.Low,Elevation.High.
+  
+```{r Elevation.Gain,Max.Grade,Elevation.Loss,Elevation.Low,Elevation.High - Acticity.Type: Run. - Exclusion_2}
+
+columnas_exclusion2 <- c("Elevation.Gain", "Max.Grade","Elevation.Loss","Elevation.Low","Elevation.High")
+Acticity_Type <- c("Run")
+
+for (col in columnas_exclusion2) {
+  Activities_final_cleaned_BC[Activities_final_cleaned_BC$Distance != 0 & is.na(Activities_final_cleaned_BC[[col]]) & Activities_final_cleaned_BC$Activity.Type %in% Acticity_Type, col] <- 0
+}
+
+```
+
+Para la tercera y cuarta variable no tiene mucho sentido que se haya recorrido una distancia sin velocidad máxima realizada, deberemos de asumir como valor la variable average speed, pues se acerca más a la realidad. Tras analizar la variable average speed a la hora de proceder a la sustitución, podemos deducir un posible motivo por el que no se haya informado la variable: en estas actividades se ha alcanzado una velocidad media muy baja (entorno a 1 o 3 kilómetros por hora).
+
+```{r Max.Speed,Average.Elapsed - Exclusion_2}
+
+columnas_exclusion2 <- c("Max.Speed", "Average.Elapsed.Speed")
+
+for (col in columnas_exclusion2) {
+  Activities_final_cleaned_BC[Activities_final_cleaned_BC$Distance != 0 & is.na(Activities_final_cleaned_BC[[col]]), col] <- 0
+}
+
+```
+
+- Variables Calories, Average.Heart.Rate,Max.Heart.Rate,Relative.Effort,Average.Cadence,Max.Cadence,Average.Temperature: en estos casos la distancia no nos puede ayudar a completar los valores faltantes, ya que estas se pueden obtener sin tener que necesariamente correr o caminar.
+
+Para calories,se ha averiguado que se puede calcular mediante la potencia  y un coeficiente de eficiencia humana. Este primero lo tenemos en muchas observaciones pero el segundo no hemos conseguido averiguar su origen. También hemos leído documentación sobre otras formas de cálculo, pero aplicándolo sobre ejemplos donde ya existía la variable calculada, estos no se ajustan a la realidad. Hablamos de una variable con sólo un 5% de valores faltantes respecto al total, es una porción muy pequeña, por lo que decidimos completarla con el cálculo de la mediana atendiendo al usuario y tipo de actividad implicado.
+
+```{r Calories - Exclusion_2}
+Activities_final_cleaned_BC <- Activities_final_cleaned_BC %>%
+  group_by(Athlete.ID, Activity.Type) %>%
+  mutate(Calories = ifelse(
+    is.na(Calories),
+    mean(Calories, na.rm = TRUE),
+    Calories
+  )) %>%
+  ungroup() %>%
+  #Cubrimos el caso en que para un atleta y tipo de actividad determinado no existan valores.Atendemos sólamente al atleta.
+  group_by(Athlete.ID) %>%
+  mutate(Calories = ifelse(
+    is.na(Calories),
+    mean(Calories, na.rm = TRUE),
+    Calories
+  )) %>%
+  ungroup()
+```
+
+Centrándonos en el resto de variables con valores faltantes, debemos de tener en cuenta que pueden deberse al registro de la actividad sin un dispositivo equipado con un monitor de ritmo cardiaco. Este, para poder predecirlo, no sólamente se necesita del atleta /actividad en cuestión puesto que la frecuencia cardíaca no es estable dentro de estos dos condicionantes (atleta y actividad), también necesitamos de alguna otra variable como el esfuerzo relativo. Encontramos que esta última también se encuentra vacía para esos mismos valores vacíos optamos por dejarlas así, pues contamos con el 80% de sus datos informados.
+
+-Variable Activity.Gear: hablamos de una variable sin mucha repercusión para el caso de estudio actual y con un poco menos del 30% de NA. Optamos por completarla con una constante global como puede ser "Desconocido"
+
+```{r Activity.Gear - Exclusion_2}
+Activities_final_cleaned_BC$Activity.Gear[is.na(Activities_final_cleaned_BC$Activity.Gear) | Activities_final_cleaned_BC$Activity.Gear ==""] <- "Unknown"
+```
+
+###Variables redundantes
+
+Durante la primera fase de la recolección y análisis tuvimos que separar la variable fecha en dos distintas: fecha por una parte (Activity.Date_Date) y tiempo por otra (Activity.Date_Time). Con ello, la variable inicial (Activity.Date) no nos aportará nada, la excluimos.
+
+```{r Redundant variable: Activity.Date}
+Activities_final_cleaned_BC <- Activities_final_cleaned_BC[, !(names(Activities_final_cleaned_BC) == "Activity.Date")]
+```
+
+### Transformación o agregación de datos
+
+```{r Generate new clon dataset - Activities_final_Transformed}
+Activities_final_Transformed<- Activities_final_cleaned_BC
+```
+
+-Crear variable nueva que enmascare el tipo de actividad (indoor o outdoor)
+
+Tras una revisión de las horas registradas en las actividades, notamos una diferencia horaria, contemplando 2 horas menos de lo que realmente fué, o 1 hora en caso de que el cambio horario ya hubiera sucedido. Con ello, para adecuarnos a la mayor realidad posible tendremos que sumar dos a todas las horas con excepción de sumar una si fecha supera el >26/10 (dia y mes del cambio horario de invierno).
+
+```{r Correction of Activity.Date_Time}
+
+ Activities_final_Transformed$Activity.Date_Time <-
+format(
+as.POSIXct(paste(Activities_final_Transformed$Activity.Date_Date, Activities_final_Transformed$Activity.Date_Time), tz = "UTC") + ifelse(Activities_final_Transformed$Activity.Date_Date > as.Date("2025-10-26"), 
+                                             3600,   # +1 hora
+                                             7200)   # +2 horas
+  
+  , "%H:%M:%S")
+```
+
+
+Creación de columna para la estación del año basándonos en el mes de la fecha correspondiente.
+
+```{r Create season column}
+
+Activities_final_Transformed <- Activities_final_Transformed %>%
+mutate(Season = case_when(
+month(Activity.Date_Date) %in% c(12, 1, 2) ~ "Winter",
+month(Activity.Date_Date) %in% c(3, 4, 5) ~ "Spring",
+month(Activity.Date_Date) %in% c(6, 7, 8) ~ "Summer",
+month(Activity.Date_Date) %in% c(9, 10, 11) ~ "Autumn"
+))
+Activities_final_Transformed$Season <- factor(Activities_final_Transformed$Season,
+levels = c("Spring","Summer","Autumn","Winter"))
+```
+
+Creación de una columna que nos puede ser de mucha utilidad a la hora de realizar el estudio posterior, hablamos del ritmo medio o pace.
+
+```{r Create pace column}
+
+Activities_final_Transformed <- Activities_final_Transformed %>% 
+  mutate(Pace = ifelse(between(as.numeric(Distance),0,1) | is.na(as.numeric(Distance)),
+                        0,
+                        (as.numeric(Moving.Time) / 60) / as.numeric(Distance)))
+
+```
+
+```{r Create Indoor.Outdoor column}
+Activities_final_Transformed$Indoor.Outdoor <- 
+              ifelse(Activities_final_Transformed$Activity.Type %in% c("WeightTraining", "Elliptical", "VirtualRide"),
+                    "Indoor",
+                            ifelse(Activities_final_Transformed$Activity.Type == "Workout" & Activities_final_Transformed$Distance == 0,
+                            "Indoor"
+                            , "Outdoor"
+                            )
+                    )
+
+```
+
+### Valores extremos.
+
+Deberemos de analizar el dataset global partiendo de las variables que más lo prepresenten. Se propone emplear la variable Activity.Type y analizarla junto a variables como la distancia a fin de descartar en una fase temprana actividades anómalas.
+
+```{r Generate new clon dataset - Activities_final_ExtremeValues}
+Activities_final_ExtremeValues<- Activities_final_Transformed
+```
+
+```{r Run activities with 0 distance value }
+
+Activities_final_ExtremeValues <- Activities_final_ExtremeValues[!(Activities_final_ExtremeValues$Activity.Type=="Run" & between(Activities_final_ExtremeValues$Distance,0,1) ) , ] 
+
+```
+Se consideran como anómalas aquellas actividades donde la actividad es correr pero no de recorre ninguna distancia, pues no tiene sentido alguno y si no las excluimos su única función será contaminar o perjudicar la muestra global.
+Afortunadamente se trata de algo puntual y que ha sucedido pocas veces (134/12821), lo cual puede obedecer a confusiones o anomalías a la hora de empezar a realizar la actividad y tener que pararlas.
+
+Procedemos con un análisis boxplot de los valores de las variables numéricas implicadas.
+
+```{r Extreme values table}
+
+cols_exclusion <- c("Athlete.ID", "Activity.ID", "Elapsed.Time") #Exlucimos variables identificadoras o que tengan una escala muy elavada con respecto al resto.
+
+#Generamos tabla visual.
+outliers <- Activities_final_ExtremeValues %>%
+  select(where(is.numeric), -all_of(cols_exclusion)) %>%
+  summarise(across(everything(), ~ {
+    q1 <- quantile(.x, 0.25, na.rm = TRUE)
+    q3 <- quantile(.x, 0.75, na.rm = TRUE)
+    iqr <- q3 - q1
+    sum(.x < (q1 - 1.5 * iqr) | .x > (q3 + 1.5 * iqr), na.rm = TRUE)
+  })) %>%
+  pivot_longer(everything(),
+               names_to = "variable",
+               values_to = "num_outliers") %>%
+  arrange(desc(num_outliers))
+
+print(outliers)
+```
+
+```{r Extreme values table : Visual Boxplot}
+
+# Generamos boxplot visual para las variables con valores extremos.
+
+
+vars_with_outliers <- c(
+  "Average.Grade", "Elevation.Low", "Moving.Time", "Relative.Effort",
+  "Elevation.Loss", "Elevation.Gain", "Calories", "Elevation.High",
+  "Max.Speed", "Average.Cadence", "Average.Speed", "Average.Elapsed.Speed",
+  "Max.Cadence", "Average.Heart.Rate", "Max.Heart.Rate",
+  "Average.Temperature", "Prefer.Perceived.Exertion"
+)
+
+# Filtramos las variables anteriores sobre el conjunto general.
+
+Activities_final_ExtremeValues_outliers <- Activities_final_ExtremeValues %>% select(all_of(vars_with_outliers))
+
+
+# Generamos gráfico general uno a uno para pder analizarlos mejor.
+
+for (v in vars_with_outliers) {
+
+  p <- Activities_final_ExtremeValues_outliers %>% 
+    pivot_longer(everything(), names_to = "var", values_to = "value") %>% 
+    filter(var == v) %>% 
+    ggplot(aes(x = var, y = value)) +
+    geom_boxplot(outlier.size = 2, outlier.alpha = 0.7) +
+    theme_minimal(base_size = 16) +
+    labs(
+      title = paste("Boxplot de", v),
+      x = "",
+      y = "Valor"
+    ) +
+    coord_flip()
+
+  print(p)
+}
+
+```
+
+Analizamos los outliers a fin de verificar si són reales y poder tomar una decisión al respecto.
+
+<u>VALORES ELEVADOS DETECTADOS</u>
+
+-Average.Grade: Podemos ver como la gran mayoria de valores convergen en 0 aunque se trata de una variable muy diversa. Tras analizar visualmente esos valores extremos confirmamos que pueden ser correctos, tengo constancia de que algunos atletas hayan hecho retos de kilómetros verticales que destacan por la elevada pendiente.
+
+-Elevation.Low: en este caso vamos a aplicar varias capas basándonos en información sobre otras variables relacionadas o bien concimientos sobre ella:
+
+  -En caso de que Elevation.High coincida con Elevation.Low , Elevation.Gain debe de ser aproximadamente cero.
+  
+```{r Same Elevation.High than Elevation.Low AND Elevation.Gain not 0}
+Activities_final_ExtremeValues %>% 
+  filter(Elevation.High==Elevation.Low & Elevation.Gain != 0) %>%
+  select(Activity.Date_Date,Activity.Type,Elevation.Low,Elevation.High,Elevation.Gain,Athlete.ID) %>%
+  print()
+```
+
+Tal y como podemos observar estas 7 actividades aunque la variable Elevation.Gain parece correcta (dentro de los valores normales), no lo es Elevation.Low ni Elevation.Hight. Deberemos de excluirlas.
+```{r Same Elevation.High than Elevation.Low AND Elevation.Gain not 0 - Execution}
+Activities_final_ExtremeValues <- Activities_final_ExtremeValues[!(Activities_final_ExtremeValues$Elevation.High==Activities_final_ExtremeValues$Elevation.Low & Activities_final_ExtremeValues$Elevation.Gain!=0), ]
+```
+
+  -En caso de que Elevation.High y Elevation.Low no coincidan pero Elevation.Gain tenga valor 0. 
+  
+```{r Not same Elevation.High then Elevation.Low but Elevation.Gain 0}
+Activities_final_ExtremeValues %>% 
+  filter(Elevation.High!=Elevation.Low & Elevation.Gain == 0) %>%
+  select(Activity.Date_Date,Activity.Type,Elevation.Low,Elevation.High,Elevation.Gain,Distance,Athlete.ID) %>%
+  print()
+```
+   Esta condición bajo el caso de actividades outdoor se puede dar perfectamente, pues podemos inidicar la actividad    en la cima de una montaña , terminarla abajo del todo sin ganar nada de elevación.
+   Será una opción segura dejar a 0 Elevation.High y Elevation.Low , siempre y cuando se trate de actividades indoor     como gimnasio.
+   
+```{r Not same Elevation.High then Elevation.Low but Elevation.Gain 0  -Execution}
+Selected_Activities <- c("Workout","Weight Training")
+cond <- Activities_final_ExtremeValues$Activity.Type %in% Selected_Activities &
+        Activities_final_ExtremeValues$Elevation.Gain == 0 &
+        Activities_final_ExtremeValues$Elevation.High != Activities_final_ExtremeValues$Elevation.Low
+
+Activities_final_ExtremeValues$Elevation.High[cond] <- 0
+Activities_final_ExtremeValues$Elevation.Low[cond]  <- 0
+
+```
+
+  -Con lo que respecta a los valores extremos inferiores, notamos que no son reales, pues las actividades               corresponden a personas que han desarrollado sus actividades por la misma zona aproximadamente (área de valencia)   donde la elevación mínima sobre el nivel del mar no baja de los 0 metros. Para este caso,hemos localizado algunas actividades propias y tras analizarlas en el aplicativo podemos detectar una pequeña anomalía puntual con el cálculo de desnivel. Así pues, optamos por corregir los valores con un valor medio estándar para la comunidad valenciana.
+  
+```{r Negatives values for Elevation.Low - Execution}
+Activities_final_ExtremeValues$Elevation.Low[Activities_final_ExtremeValues$Elevation.Low < 0] <-10
+```
+  
+  -Con lo que respecta a los valores extremos superiores, revisando y contrastando la veracidad de los puntos más extremos confirmamos que son veridicos, pues varios de los atletas implicados han realizado desfios en zonas de alta envergadura montañosa, incluyendo países como Nepal.
+
+En este caso podemos encontrar valores bastante extremos donde se descarta una posible hazaña relacionada con el mundo del deporte. Estos valores parecen provenir de errores de altitud propios de GPS.
+
+
+- Moving Time: Vemos como la duración media de las actividades para la mayor parte de las actividades rondan la hora/ hora y media. También contamos con un número elevado de actividades incluso con valores extremos de hasta 34 horas, pues dentro de la muestra contamos con corredores de tipo ultradistancia donde puede ser habitual alcanzar  hasta los  100 kilómetros por montaña.
+
+-Relative.Effort,Elevation.Gain,Calories,Elevation.High: En línea con lo que se ha comentado en la variable anterior, podemos corroborar como veridicas los valores extremos encontrados.
+
+https://www.reddit.com/r/Strava/comments/1o4tmim/what_is_the_highest_relative_effort_you_have_done/?tl=es-419
+
+
+<u>VALORES MEDIOS DETECTADOS.</u>
+
+-Max.Speed,Average.Cadence,Average.Speed,Average.Elapsed.Speed : Vemos como los valores extremos para la variable Average.Speed parecen correctos ya que pertencen a actividades de bicicleta, pues aquí la velocidad que se suele alcanzar son más elevadas. Por su parte, no podemos decir lo mismo para la variable Max.Speed donde sí que encontramos valores bastante imposibles para actividades de carrera, si bien hablamos de un pico de velocidad superior a lo habitual, no es posible que se llegue a los 34 km/h en atletas no profesionales como es el caso.
+
+```{r Activity.Type is Run AND MaxSpeed > 20}
+
+Activities_final_ExtremeValues %>%
+  filter(Activity.Type == "Run" & as.numeric( Max.Speed )>18 ) %>%
+  print()
+```
+Reasignamos los valores implicadaos basándonos en una median razonable factible.
+
+```{r Activity.Type is Run AND MaxSpeed > 20 - Execution}
+cond <-Activities_final_ExtremeValues$Activity.Type == "Run" &
+    as.numeric(Activities_final_ExtremeValues$Max.Speed) >18
+
+Activities_final_ExtremeValues$Max.Speed[cond] <- 16
+```
+
+<u>VALORES BAJOS DETECTADOS</u>
+
+A priori estos no afectan de manera significativa al conjunto global de datos, indistintamente, podemos fijarnos en los valores extremos de la variable Max.Heart.Rate donde notamos algunos valores puntuales elevados que no tienen sentido, se trata de actividades con pico máximos cardíacos desorbitados con distancia baja o muy baja y velocidad máxima baja o muy baja.
+
+```{r Max.Heart.Rate > 200 AND Distance 0  AND Max.Speed 0 }
+
+Activities_final_ExtremeValues %>%
+  filter(Max.Heart.Rate >200 & Distance == 0 & Max.Speed ==0) %>%
+  print()
+```
+
+Dadas estas actividades, optamos por excluirlas ya que no suponen un volumen significativo respecto al total.
+
+```{r Max.Heart.Rate > 200 AND Distance 0  AND Max.Speed 0 - Execution}
+
+cond <- with(Activities_final_ExtremeValues,
+             Max.Heart.Rate > 200 &
+             Distance == 0 &
+             Max.Speed == 0)
+
+# Reemplazamos NA por FALSE explícitamente para evitar problemas con el valor NA que pueda tener algún campo usado.
+cond[is.na(cond)] <- FALSE
+
+Activities_final_ExtremeValues <- Activities_final_ExtremeValues[!cond, ]
+
+```
+
+# **Análisis y visualización previa al modelado.**
+
+Después de una dedicada fase de prepación de los datos de los 11 corredores, damos paso al análisis definitorio de las variables que han resultado así como el número de observaciones de las mismas. Así pues,tomando como base 12830 actividades recolectadas al inicio, han resultado 12506, como podemos observar no hemos tenido que segregar una cantidad significativa de observaciones anómalas, de hecho muchas de ellas las hemos podido corregir gracias al conocimiento del datatset y al mundo de las carreras.
+Por su parte,partiendo de cerca de 100 dimensiones o columnas iniciales, nos hemos quedado con 28, las cuales resultan de un estudio minucioso de sus valores.
+
+Con el presente análisis que vamos a practicar, se busca tratar de responder a parte de las preguntas planteadas al inicio del trabajo así como entender con más grado de detalle la estructuración de los mismos:
+
+```{r Generete new dataset - Activities_final_Analysis}
+Activities_final_Analysis <- Activities_final_ExtremeValues
+```
+
+```{r Correlative matrix - variables }
+
+# Calculamos matriz de correlaciones entre algunas variables cuantitativas de interés
+
+numeric_vars <- Activities_final_Analysis %>% 
+select(Distance,Moving.Time, Average.Speed, Average.Heart.Rate, Max.Heart.Rate, Relative.Effort, Calories, Average.Temperature,Elevation.Gain) %>%
+select_if(is.numeric) %>%
+drop_na() 
+corr_matrix <- cor(na.omit(numeric_vars))
+#Visualizamos.
+corrplot(corr_matrix, method = "color", type = "upper", tl.cex = 0.7, addCoef.col = "black")
+
+```
+
+ **Relaciones fuertes**
+- Calories con Relative.Effort (0.77): da a entender que un mayor esfuerzo implica más gasto energético.
+-Distance con Calories (0.75) y Moving.Time (0.75): estas dos son bastante lógicas, a cuanta más distancia recorras indispensablemente vas a tener que quemar más calorias para poder mover el cuerpo.
+-Relative.Effort con Elevation.Gain (0.67): subir implica más esfuerzo, aunque distancia sea igual.
+
+**Relaciones moderadas**
+-Distance con Average.Speed (0.53): es esperable, aunque no lineal en todos los casos.
+-Average.Heart.Rate con Relative.Effort (0.56): consistente con la idea de usar la FC como estimador del esfuerzo.
+
+**Correlaciones débiles o negativas**
+-Average.Temperature se correlaciona débilmente con las demás, lo que es interesante y podrá ser objeto de análisis.
+
+
+```{r PRUEBAS 1}
+
+```
+
+## Graficos exploratorios generales.
+
+Damos comienzo con la implementación de una serie de gráficos encargados de dar una visión general y más completa de los datos que nos disponemos a analizar. Haremos uso de variables claves como distancia, ritmo, desnivel, frecuencia cardíaca, esfuerzo relativo...
+
+```{r k Means - }
+# Agrupamiento K-means por Rendimiento de Atletas
+
+#Para cada atleta calculamos distancia media,ritmo medio y elevación media en sus actividades.
+
+athlete_summary <- Activities_final_Analysis %>%
+#filter(Activity.Type  == "Run") %>%
+group_by(Athlete.ID) %>%
+summarise(
+Distancia_media_km = mean(Distance, na.rm = TRUE),
+Ritmo_medio = mean(Pace, na.rm = TRUE), # en min/km
+Elevacion_media = mean(Elevation.Gain, na.rm = TRUE)
+)
+
+athlete_features <- athlete_summary %>%
+select(Distancia_media_km, Ritmo_medio, Elevacion_media) %>%
+scale()
+
+set.seed(123) # fijamos semilla para reproducibilidad
+
+modelo_km3 <- kmeans(athlete_features, centers = 3, nstart = 20)
+
+athlete_summary$Cluster <- factor(modelo_km3$cluster)
+
+print(athlete_summary)
+
+```
+
+```{r Visual K-Means}
+# Representamos distancia media vs Elevación media aplicando un filtro de grupo de atleta generado anteriormente.
+
+ggplot(athlete_summary, aes(x = Distancia_media_km, y = Elevacion_media, color = Cluster)) +
+geom_point(size = 3, alpha = 0.8) +
+geom_text(aes(label = Athlete.ID), vjust = -0.8, size = 3, show.legend = FALSE) +
+labs(x = "Distancia media (km)", y = "Elevación media (m)",
+title = "Clusters de atletas según distancia, ritmo y elevación",
+color = "Cluster") +
+theme_minimal()
+
+```
+
+```{r Histograms}
+
+# Selección de variables de interés
+
+vars <- Activities_final_Analysis %>%
+  select(
+    `Ritmo(min/km)` = Pace,
+    `Distancia(km)` = Distance,
+    `FC Media(lpm)` = Average.Heart.Rate,
+    `Esfuerzo Relativo(puntos)` = Relative.Effort
+  )
+
+# Reestructurar el data frame a formato largo
+df_long <- melt(vars)
+
+ggplot(df_long, aes(x = value, fill = variable)) +
+  geom_histogram(bins = 30, color = "white", alpha = 0.85) +
+  facet_wrap(~variable, scales = "free", ncol = 2) +
+  labs(title = "Distribución de variables clave", x = "Valor", y = "Frecuencia") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+```
+
+Atendiendo a la representación visual expuesta, pasamos a detallar su significado:
+
+
+La variable Ritmo (min/km) presenta una distribución marcadamente asimétrica hacia la derecha. La mayor concentración de valores se sitúa entre los 4 y 8 minutos por kilómetro, lo que refleja rangos típicos de ritmo de carrera en corredores aficionados o entrenados. Sin embargo, vemos una cola larga de valores superiores entorno a 12 min/km, los cuales podrían estar asociados a caminatas, pausas, entrenamientos suaves o actividades con errores de registro. Esta distribución sugiere la necesidad de considerar un filtrado de valores atípicos en los análisis posteriores centrados en rendimiento.
+
+En cuanto a la Distancia (km), se observa una alta concentración de actividades por debajo de los 20 km, con un pico marcado entre los 5 y 10 km. La silueta representada es habitual en disciplinas de resistencia y refleja la predominancia de entrenamientos cortos o medios. Las actividades de larga distancia (>30 km) están presentes pero son minoritarias, por lo que podrían analizarse por separado.
+
+La Frecuencia Cardíaca Media (FC Media) presenta una distribución aproximadamente normal, centrada en torno a los 140 latidos por minuto. Este patrón propone una estabilidad fisiológica entre los atletas durante sus actividades, con valores que en su mayoría oscilan entre 100 y 170 lpm. Esta variable será clave para interpretar el nivel de esfuerzo fisiológico y su evolución en función de distancia, temperatura o sexo.
+
+Por último, la variable Esfuerzo Relativo muestra una clara asimetría positiva, mostrando una gran cantidad de actividades con puntuaciones bajas (<100), y una cola larga que llega a valores superiores a 300 puntos. Este tipo de variable acumulativa, muy influida por distancia, desnivel y tiempo de ejercicio, sugiere que puede ser más informativo trabajar con rangos, percentiles o incluso clasificaciones ordinales, en lugar de tratarla como una métrica continua homogénea.
+
+Seguimos con una serie de comparativos y evolutivos.
+
+```{r Evolution of weekly kms}
+
+# Calculamos la distancia total recorrida por semana para todos los corredores combinados.
+
+weekly_distance <- Activities_final_Analysis %>%
+mutate(Semana = floor_date(Activity.Date_Date, unit = "week")) %>%
+group_by(Semana) %>%
+summarise(Kilometros_semanales = sum(as.numeric(Distance), na.rm = TRUE)) 
+
+#Visualización de evoluación.
+
+ggplot(weekly_distance, aes(x = Semana, y = Kilometros_semanales)) +
+geom_line(color = "steelblue", size = 1) +
+geom_smooth(method = "loess", span = 0.2, se = FALSE, color = "orange") + # línea suavizada para tendencia
+labs(x = "Semana", y = "Kilómetros totales", title = "Evolución semanal del kilometraje total") +
+scale_x_date(date_breaks = "6 months", date_labels = "%Y-%m") + # marcas cada 6 meses
+theme_minimal()
+
+```
+
+```{r Evolution of pace x gender}
+ggplot(Activities_final_Analysis %>% filter(!is.na(Pace)), aes(x = Sex, y = Pace, fill = Sex)) +
+  geom_boxplot(outlier.color = "red", outlier.alpha = 0.6) +
+  labs(title = "Comparación de Ritmo promedio por género",
+       x = "Género del atleta", y = "Ritmo (min/km)") +
+  theme_minimal()
+```
+
+```{r Comparison of activity type x season}
+mix <- Activities_final_Analysis %>%
+  count(Season, Activity.Type, Sex, name = "n")
+
+plot_ly(mix, x = ~Season, y = ~n, color = ~Activity.Type, type = "bar") %>%
+  layout(barmode = "stack") %>%
+  layout(yaxis = list(title = "Nº actividades"), xaxis = list(title = "Estación"))
+
+```
+
+```{r Comparison of Average.Temperature x Pace}
+
+ggplot(Activities_final_Analysis %>% filter(!is.na(Average.Temperature), !is.na(Pace),Average.Temperature>-20), 
+       aes(x = Average.Temperature, y = Pace)) +
+  geom_point(alpha = 0.4, color = "steelblue") +
+  geom_smooth(method = "loess", color = "red") +
+  labs(title = "Influencia de la Temperatura en el Ritmo",
+       x = "Temperatura promedio (°C)", y = "Ritmo (min/km)") +
+  theme_minimal()
+
+```
+
+Notamos una ligera tendencia en forma de U invertida: el ritmo tiende a ser más rápido entre 10–20°C y empeora tanto en frío como en calor extremo. Inferimos con ello que existe y conocemos un rango óptimo de temperatura para el rendimiento.
+
+
+# **Aplicación de modelos predictivos.**
+
+```{r Model definition: lineal model with interaction}
+
+Activities_final_Analysis$Sex <- factor(Activities_final_Analysis$Sex)
+
+#Busca analizar el efecto de las variables Average.Temperature y Sex sobre el ritmo.
+modelo_interactivo <- lm(Pace ~ Average.Temperature * Sex, data = Activities_final_Analysis)
+summary(modelo_interactivo)
+
+pred <- ggpredict(modelo_interactivo, terms = c("Average.Temperature", "Sex"))
+plot(pred) + labs(title = "Predicción del ritmo por temperatura y género")
+```
+
+```{r Model definition: quantic regresion with interaction}
+#Trata de dar a entender cómo cambian los ritmos (más rápidos o lentos) bajo ciertas condiciones.
+
+modelo_q <- rq(Pace ~ Average.Temperature + Distance, data = Activities_final_Analysis, tau = 0.5)
+summary(modelo_q)
+
+pred_rq <- predict(modelo_q, Activities_final_Analysis)
+
+plot(Activities_final_Analysis$Average.Temperature, pred_rq, type = "l", col = "mediumpurple",
+     xlab = "Temperatura", ylab = "Ritmo estimado (mediana)",
+     main = "Regresión cuantílica: ritmo mediano vs temperatura")
+
+```
+
+```{r Shiny APP - Generalized Additive Model  }
+
+# Enmascaramos meses y años. Convertir un número de mes relativo  en una etiqueta legible estilo “mes 1 de año 1”.
+label_month <- function(m) {
+  yr  <- (m - 1) %/% 12 + 1
+  mon <- (m - 1) %%  12 + 1
+  paste0("mes ", mon, " de año ", yr)
+}
+
+#Función para calcular la tendencia suave por sexo.Línea central.
+
+safe_gam_pred <- function(dat, yvar, max_m) {
+  
+  # Aseguramos que la entrada es un dataframe así como la existencia de columnas necesarias.
+  if (!is.data.frame(dat)) dat <- as.data.frame(dat)
+  if (!("month_index" %in% names(dat))) return(NULL)
+  if (!(yvar %in% names(dat))) return(NULL)
+
+  # Filtramos sólamente los que no son NAs.
+  keep <- !is.na(dat$month_index) & !is.na(dat[[yvar]])
+  dat <- dat[keep, , drop = FALSE]
+
+  #Establecemos algunas reglas de ajuste sobre el gráfico, lso datos deben de cumplirlo mínimamente.
+  if (nrow(dat) < 10) return(NULL)
+  if (length(unique(dat$month_index)) < 6) return(NULL)
+
+  #Parametrizamos la complejidad del suavizado.
+  k_use <- min(10, max(6, length(unique(dat$month_index)) - 1))
+
+  #Construimos fórmula de cálculo y ajuste del modelo a utilizar GAM.
+  fml <- as.formula(sprintf("%s ~ s(month_index, k = %d)", yvar, k_use))
+  fit <- mgcv::gam(fml, data = dat, method = "REML")
+  
+  #Calculamos la tendencia para cada mes.
+  grid <- data.frame(month_index = 1:max_m)
+  grid$month_label <- label_month(grid$month_index)
+  grid$yhat <- as.numeric(predict(fit, newdata = grid))
+
+  grid
+}
+
+# Construimos función que nos genere un panel mediante plotly.
+make_panel_plotly <- function(dat, yvar, ytitle, max_m, show_individual = TRUE,
+                              tickvals, ticktext, show_trend_legend = TRUE) {
+  #Segmentación de datos por sexo.
+  
+  dm <- dat %>% filter(Sex == "M")
+  df <- dat %>% filter(Sex == "F")
+
+  p <- plot_ly()
+
+  # Configuramos gráfico para que este permita líneas individuales por atleta.
+  if (show_individual) {
+    if (nrow(dm) > 0) {
+      p <- p %>% add_lines(
+        data = dm,
+        x = ~month_index, y = as.formula(paste0("~", yvar)),
+        split = ~Athlete.ID,
+        line = list(color = "blue", width = 1),
+        opacity = 0.25,
+        hovertemplate = paste0(
+          "Atleta: %{fullData.name}<br>",
+          "Sexo: M<br>",
+          "Tiempo: %{customdata}<br>",
+          ytitle, ": %{y:.2f}<extra></extra>"
+        ),
+        customdata = ~month_label,
+        showlegend = FALSE
+      )
+    }
+
+    if (nrow(df) > 0) {
+      p <- p %>% add_lines(
+        data = df,
+        x = ~month_index, y = as.formula(paste0("~", yvar)),
+        split = ~Athlete.ID,
+        line = list(color = "red", width = 1),
+        opacity = 0.25,
+        hovertemplate = paste0(
+          "Atleta: %{fullData.name}<br>",
+          "Sexo: F<br>",
+          "Tiempo: %{customdata}<br>",
+          ytitle, ": %{y:.2f}<extra></extra>"
+        ),
+        customdata = ~month_label,
+        showlegend = FALSE
+      )
+    }
+  }
+
+  # Calculo de tendencias por sexo predichas mediante función anterior.
+  pred_m <- safe_gam_pred(dm, yvar, max_m)
+  pred_f <- safe_gam_pred(df, yvar, max_m)
+
+  #Dibujamos las líneas con la predicción por genero.
+  if (!is.null(pred_m)) {
+    p <- p %>% add_lines(
+      data = pred_m,
+      x = ~month_index, y = ~yhat,
+      name = "Tendencia M",
+      showlegend = show_trend_legend,
+      legendgroup = "tend_m",
+      line = list(color = "blue", width = 4),
+      hovertemplate = paste0("Tendencia M<br>Tiempo: %{customdata}<br>", ytitle, ": %{y:.2f}<extra></extra>"),
+      customdata = ~month_label
+    )
+  }
+
+  if (!is.null(pred_f)) {
+    p <- p %>% add_lines(
+      data = pred_f,
+      x = ~month_index, y = ~yhat,
+      name = "Tendencia F",
+      showlegend = show_trend_legend,
+      legendgroup = "tend_m",
+      line = list(color = "red", width = 4),
+      hovertemplate = paste0("Tendencia F<br>Tiempo: %{customdata}<br>", ytitle, ": %{y:.2f}<extra></extra>"),
+      customdata = ~month_label
+    )
+  }
+
+  #Formateo del eje x atendiendo a las etiquetas enmascardas.
+  p %>%
+    layout(
+      yaxis = list(title = ytitle),
+      xaxis = list(
+        title = "Tiempo desde cero (meses enmascarados)",
+        tickmode = "array",
+        tickvals = tickvals,
+        ticktext = ticktext,
+        tickangle = 45
+      ),
+      hovermode = "closest"
+    )
+}
+
+#Preparación del dataset para poder graficar acorde con lo que pretendemos.
+raw <- Activities_final_Analysis %>%
+  mutate(
+    date = ymd(Activity.Date_Date),
+    Athlete.ID = as.factor(Athlete.ID),
+
+    #Normalizamos variable Sex en base a dos niveles.
+    Sex_raw = toupper(as.character(Sex)),
+    Sex = case_when(
+      Sex_raw %in% c("M", "MALE", "H", "HOMBRE") ~ "M",
+      Sex_raw %in% c("F", "FEMALE", "MUJER")     ~ "F",
+      TRUE ~ NA_character_
+    ),
+    Sex = factor(Sex, levels = c("M", "F")),
+    #Creamos métricas base.
+    dist_km   = Distance,         
+    mov_hour   = Moving.Time / 3600,  
+    elev_gain = Elevation.Gain
+  ) %>%
+  
+  #filter(!is.na(date), !is.na(Athlete.ID), !is.na(Sex)) %>%
+  
+  #Filtramos solo actividades implicadas en Carrera.
+  filter(Activity.Type %in% c("Run")) %>%
+  mutate(month_date = floor_date(date, "month")) %>%
+  
+  # Cálculo del inicio de sesiones para cada atleta.
+  group_by(Athlete.ID) %>%
+  mutate(
+    start_month = min(month_date, na.rm = TRUE),
+    month_index = interval(start_month, month_date) %/% months(1) + 1
+  ) %>%
+  ungroup()
+
+#Agregación mensual por atleta y sexo con sumatorio de variables clave como distancia,tiempo en movimiento o ganancia de elevación.
+monthly_base <- raw %>%
+  group_by(Athlete.ID, Sex, month_index) %>%
+  summarise(
+    dist_km   = sum(dist_km,   na.rm = TRUE),
+    mov_hour   = sum(mov_hour,   na.rm = TRUE),
+    elev_gain = sum(elev_gain, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# Generamos y configuramos controles visuales para manejar e interactuar con los datos.
+
+ui <- fluidPage(
+  titlePanel("Evolución desde cero (mensual) por atleta + tendencia por sexo"),
+  sidebarLayout(
+    sidebarPanel(
+      selectizeInput(
+        "athletes", "Selecciona atletas (vacío = todos):",
+        choices = sort(unique(as.character(monthly_base$Athlete.ID))),
+        multiple = TRUE,
+        options = list(placeholder = "Escribe para buscar...", maxOptions = 2000)
+      ),
+      radioButtons("sex_filter", "Sexo:", choices = c("Ambos" = "ALL", "Masculino" = "M", "Femenino" = "F"),
+                   selected = "ALL", inline = TRUE),
+      checkboxInput("fill_zeros", "Rellenar meses sin actividad con 0 (línea continua)", value = TRUE),
+      checkboxInput("show_individual", "Mostrar líneas individuales por atleta", value = TRUE),
+      sliderInput("max_months", "Mostrar primeros N meses desde cero:",
+                  min = 6, max = max(monthly_base$month_index, na.rm = TRUE),
+                  value = min(36, max(monthly_base$month_index, na.rm = TRUE)), step = 1),
+      helpText("Azul = Masculino | Rojo = Femenino. La línea gruesa es tendencia (GAM) por sexo.")
+    ),
+    mainPanel(
+      plotlyOutput("evolPlot", height = "850px"),
+      hr(),
+      verbatimTextOutput("info")
+    )
+  )
+)
+
+# Implementamos lógica de funcionamiento del gráfico. Le llamamos servidor o server.
+
+server <- function(input, output, session) {
+
+  #Permite recolectar los filtros que ha añadido el usuario para su aplicación posterior.
+  dat_reactive <- reactive({
+    d <- monthly_base
+
+    # filtro atletas
+    if (!is.null(input$athletes) && length(input$athletes) > 0) {
+      d <- d %>% filter(as.character(Athlete.ID) %in% input$athletes)
+    }
+
+    # filtro sexo
+    if (input$sex_filter != "ALL") {
+      d <- d %>% filter(Sex == input$sex_filter)
+    }
+
+    # limitar meses
+    d <- d %>% filter(month_index <= input$max_months)
+
+    # completar meses con 0 (opcional)
+    if (isTRUE(input$fill_zeros)) {
+      d <- d %>%
+        group_by(Athlete.ID, Sex) %>%
+        complete(month_index = 1:input$max_months,
+                 fill = list(dist_km = 0, mov_hour = 0, elev_gain = 0)) %>%
+        ungroup()
+    }
+
+    d %>% mutate(month_label = label_month(month_index))
+  })
+
+  #Construimos 3 paneles (uno por cada métrica a analizar).
+  
+  output$evolPlot <- renderPlotly({
+    dat <- dat_reactive()
+    validate(need(nrow(dat) > 0, "No hay datos con esos filtros."))
+
+    max_m <- input$max_months
+
+    # ticks legibles
+    by_step <- dplyr::case_when(max_m <= 24 ~ 1, max_m <= 48 ~ 2, TRUE ~ 3)
+    tickvals <- seq(1, max_m, by = by_step)
+    ticktext <- label_month(tickvals)
+
+    p1 <- make_panel_plotly(dat, "dist_km",   "Distancia mensual (km)", max_m,
+                            show_individual = isTRUE(input$show_individual),
+                            tickvals = tickvals, ticktext = ticktext
+                            ,show_trend_legend = TRUE)
+
+    p2 <- make_panel_plotly(dat, "mov_hour",   "Tiempo en movimiento mensual (h)", max_m,
+                            show_individual = isTRUE(input$show_individual),
+                            tickvals = tickvals, ticktext = ticktext
+                            ,show_trend_legend = FALSE)
+
+    p3 <- make_panel_plotly(dat, "elev_gain", "Desnivel+ mensual (m)", max_m,
+                            show_individual = isTRUE(input$show_individual),
+                            tickvals = tickvals, ticktext = ticktext
+                            ,show_trend_legend = FALSE)
+
+    subplot(p1, p2, p3, nrows = 3, shareX = TRUE, titleY = TRUE) %>%
+      layout(
+        legend = list(orientation = "h", x = 0, y = 1.05),
+        margin = list(l = 60, r = 30, t = 60, b = 80)
+      )
+  })
+
+  #A modo de ayuda incluimos en el gráfico una especie de consola para mostrar información sobre parámetros actualmente aplicados sobre los gráficos.
+  
+  output$info <- renderPrint({
+    dat <- dat_reactive()
+    list(
+      atletas_mostrados = n_distinct(dat$Athlete.ID),
+      meses_mostrados = input$max_months,
+      sexo = input$sex_filter,
+      lineas_individuales = input$show_individual,
+      meses_con_0 = input$fill_zeros
+    )
+  })
+}
+#Lanzamos aplicación interactiva facilitándole parte interacción junto a la lógica a seguir.
+#options(shiny.launch.browser = FALSE)
+shinyApp(ui, server)
+
+```
