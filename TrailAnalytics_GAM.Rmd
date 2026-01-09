@@ -1,0 +1,412 @@
+---
+title: "TrailAnalytics : Modelo evolutivo GAM"
+author: "Jordi Adam"
+date: "2025-10-03"
+header-includes:
+  \usepackage{array} 
+output:
+  html_document:
+      theme: default
+      toc: false
+      #code_folding: hide
+      runtime: shiny
+  word_document:
+    toc: yes
+    number_sections: yes
+  pdf_document:
+    latex_engine: xelatex
+    toc: yes
+    number_sections: yes
+
+---
+
+```{r, echo=FALSE, results="asis"}
+cat('
+<style>
+html, body {height:100%; margin:0;}
+
+/* Quitamos paddings del Rmd para ganar alto */
+.main-container {max-width:100% !important; padding:0 !important;}
+.container-fluid {padding-left:12px !important; padding-right:12px !important;}
+
+#shinyapp {height:100vh !important;}
+</style>
+')
+
+```
+
+```{r setup, include=FALSE, echo=FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
+```
+
+```{r Instalación de librerias necesarias, echo=FALSE}
+if (!require("VIM")) {
+  install.packages("VIM")
+}
+if (!require("missForest")) {
+  install.packages("missForest")
+}
+if (!require("plotly")) {
+  install.packages("plotly")
+}
+if (!require("tidyverse")) {
+  install.packages("tidyverse")
+}
+if (!require("lubridate")) {
+  install.packages("lubridate")
+}
+if (!require("ggeffects")) {
+  install.packages("ggeffects")
+}
+if (!require("sjPlot")) {
+  install.packages("sjPlot")
+}
+if (!require("tinytex")) {
+  install.packages("tinytex")
+}
+
+
+library(dplyr)
+library(lubridate)
+library(ggplot2)
+library(scales)
+library(plotly)
+library(tidyverse)
+library(lubridate)
+library(missForest)
+library(VIM)
+library(corrplot)
+library(reshape2)
+library(lme4)
+library(quantreg)
+library(ggeffects)
+library(sjPlot)
+
+library(plotly)
+library(performance)
+
+library(shiny)
+library(mgcv)
+
+#remove.packages("devtools")
+#installed.packages()
+```
+
+```{r Data upload: Activities_final_Analysis.csv , echo=FALSE}
+
+base_dir <- file.path(".")
+
+paths_activities <- file.path(base_dir, "Activities_final_Analysis.csv")
+
+read_one <- function(p) read.csv(p, stringsAsFactors = TRUE, sep = ",")
+
+Activities_final_Analysis <- read_one(paths_activities[1])
+
+```
+
+```{r Shiny APP - Generalized Additive Model , echo=FALSE}
+
+# Enmascaramos meses y años. Convertir un número de mes relativo  en una etiqueta legible estilo “mes 1 de año 1”.
+label_month <- function(m) {
+  yr  <- (m - 1) %/% 12 + 1
+  mon <- (m - 1) %%  12 + 1
+  paste0("mes ", mon, " de año ", yr)
+}
+
+#Función para calcular la tendencia suave por sexo.Línea central.
+
+safe_gam_pred <- function(dat, yvar, max_m) {
+  
+  # Aseguramos que la entrada es un dataframe así como la existencia de columnas necesarias.
+  if (!is.data.frame(dat)) dat <- as.data.frame(dat)
+  if (!("month_index" %in% names(dat))) return(NULL)
+  if (!(yvar %in% names(dat))) return(NULL)
+
+  # Filtramos sólamente los que no son NAs.
+  keep <- !is.na(dat$month_index) & !is.na(dat[[yvar]])
+  dat <- dat[keep, , drop = FALSE]
+
+  #Establecemos algunas reglas de ajuste sobre el gráfico, lso datos deben de cumplirlo mínimamente.
+  if (nrow(dat) < 10) return(NULL)
+  if (length(unique(dat$month_index)) < 6) return(NULL)
+
+  #Parametrizamos la complejidad del suavizado.
+  k_use <- min(10, max(6, length(unique(dat$month_index)) - 1))
+
+  #Construimos fórmula de cálculo y ajuste del modelo a utilizar GAM.
+  fml <- as.formula(sprintf("%s ~ s(month_index, k = %d)", yvar, k_use))
+  fit <- mgcv::gam(fml, data = dat, method = "REML")
+  
+  #Calculamos la tendencia para cada mes.
+  grid <- data.frame(month_index = 1:max_m)
+  grid$month_label <- label_month(grid$month_index)
+  grid$yhat <- as.numeric(predict(fit, newdata = grid))
+
+  grid
+}
+
+# Construimos función que nos genere un panel mediante plotly.
+make_panel_plotly <- function(dat, yvar, ytitle, max_m, show_individual = TRUE,
+                              tickvals, ticktext, show_trend_legend = TRUE) {
+  #Segmentación de datos por sexo.
+  
+  dm <- dat %>% filter(Sex == "M")
+  df <- dat %>% filter(Sex == "F")
+
+  p <- plot_ly()
+
+  # Configuramos gráfico para que este permita líneas individuales por atleta.
+  if (show_individual) {
+    if (nrow(dm) > 0) {
+      p <- p %>% add_lines(
+        data = dm,
+        x = ~month_index, y = as.formula(paste0("~", yvar)),
+        split = ~Athlete.ID,
+        line = list(color = "blue", width = 1),
+        opacity = 0.25,
+        hovertemplate = paste0(
+          "Atleta: %{fullData.name}<br>",
+          "Sexo: M<br>",
+          "Tiempo: %{customdata}<br>",
+          ytitle, ": %{y:.2f}<extra></extra>"
+        ),
+        customdata = ~month_label,
+        showlegend = FALSE
+      )
+    }
+
+    if (nrow(df) > 0) {
+      p <- p %>% add_lines(
+        data = df,
+        x = ~month_index, y = as.formula(paste0("~", yvar)),
+        split = ~Athlete.ID,
+        line = list(color = "red", width = 1),
+        opacity = 0.25,
+        hovertemplate = paste0(
+          "Atleta: %{fullData.name}<br>",
+          "Sexo: F<br>",
+          "Tiempo: %{customdata}<br>",
+          ytitle, ": %{y:.2f}<extra></extra>"
+        ),
+        customdata = ~month_label,
+        showlegend = FALSE
+      )
+    }
+  }
+
+  # Calculo de tendencias por sexo predichas mediante función anterior.
+  pred_m <- safe_gam_pred(dm, yvar, max_m)
+  pred_f <- safe_gam_pred(df, yvar, max_m)
+
+  #Dibujamos las líneas con la predicción por genero.
+  if (!is.null(pred_m)) {
+    p <- p %>% add_lines(
+      data = pred_m,
+      x = ~month_index, y = ~yhat,
+      name = "Tendencia M",
+      showlegend = show_trend_legend,
+      legendgroup = "tend_m",
+      line = list(color = "blue", width = 4),
+      hovertemplate = paste0("Tendencia M<br>Tiempo: %{customdata}<br>", ytitle, ": %{y:.2f}<extra></extra>"),
+      customdata = ~month_label
+    )
+  }
+
+  if (!is.null(pred_f)) {
+    p <- p %>% add_lines(
+      data = pred_f,
+      x = ~month_index, y = ~yhat,
+      name = "Tendencia F",
+      showlegend = show_trend_legend,
+      legendgroup = "tend_m",
+      line = list(color = "red", width = 4),
+      hovertemplate = paste0("Tendencia F<br>Tiempo: %{customdata}<br>", ytitle, ": %{y:.2f}<extra></extra>"),
+      customdata = ~month_label
+    )
+  }
+
+  #Formateo del eje x atendiendo a las etiquetas enmascardas.
+  p %>%
+    layout(
+      yaxis = list(title = ytitle),
+      xaxis = list(
+        title = "Tiempo desde cero (meses enmascarados)",
+        tickmode = "array",
+        tickvals = tickvals,
+        ticktext = ticktext,
+        tickangle = 45
+      ),
+      hovermode = "closest"
+    )
+}
+
+#Preparación del dataset para poder graficar acorde con lo que pretendemos.
+raw <- Activities_final_Analysis %>%
+  mutate(
+    date = ymd(Activity.Date_Date),
+    Athlete.ID = as.factor(Athlete.ID),
+
+    #Normalizamos variable Sex en base a dos niveles.
+    Sex_raw = toupper(as.character(Sex)),
+    Sex = case_when(
+      Sex_raw %in% c("M", "MALE", "H", "HOMBRE") ~ "M",
+      Sex_raw %in% c("F", "FEMALE", "MUJER")     ~ "F",
+      TRUE ~ NA_character_
+    ),
+    Sex = factor(Sex, levels = c("M", "F")),
+    #Creamos métricas base.
+    dist_km   = Distance,         
+    mov_hour   = Moving.Time / 3600,  
+    elev_gain = Elevation.Gain
+  ) %>%
+  
+  #filter(!is.na(date), !is.na(Athlete.ID), !is.na(Sex)) %>%
+  
+  #Filtramos solo actividades implicadas en Carrera.
+  filter(Activity.Type %in% c("Run")) %>%
+  mutate(month_date = floor_date(date, "month")) %>%
+  
+  # Cálculo del inicio de sesiones para cada atleta.
+  group_by(Athlete.ID) %>%
+  mutate(
+    start_month = min(month_date, na.rm = TRUE),
+    month_index = interval(start_month, month_date) %/% months(1) + 1
+  ) %>%
+  ungroup()
+
+#Agregación mensual por atleta y sexo con sumatorio de variables clave como distancia,tiempo en movimiento o ganancia de elevación.
+monthly_base <- raw %>%
+  group_by(Athlete.ID, Sex, month_index) %>%
+  summarise(
+    dist_km   = sum(dist_km,   na.rm = TRUE),
+    mov_hour   = sum(mov_hour,   na.rm = TRUE),
+    elev_gain = sum(elev_gain, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# Generamos y configuramos controles visuales para manejar e interactuar con los datos.
+
+ui <- fluidPage(
+  titlePanel("Evolución desde cero (mensual) por atleta + tendencia por sexo"),
+  sidebarLayout(
+    sidebarPanel(
+      selectizeInput(
+        "athletes", "Selecciona atletas (vacío = todos):",
+        choices = sort(unique(as.character(monthly_base$Athlete.ID))),
+        multiple = TRUE,
+        options = list(placeholder = "Escribe para buscar...", maxOptions = 2000)
+      ),
+      radioButtons("sex_filter", "Sexo:", choices = c("Ambos" = "ALL", "Masculino" = "M", "Femenino" = "F"),
+                   selected = "ALL", inline = TRUE),
+      checkboxInput("fill_zeros", "Rellenar meses sin actividad con 0 (línea continua)", value = TRUE),
+      checkboxInput("show_individual", "Mostrar líneas individuales por atleta", value = TRUE),
+      sliderInput("max_months", "Mostrar primeros N meses desde cero:",
+                  min = 6, max = max(monthly_base$month_index, na.rm = TRUE),
+                  value = min(36, max(monthly_base$month_index, na.rm = TRUE)), step = 1),
+      helpText("Azul = Masculino | Rojo = Femenino. La línea gruesa es tendencia (GAM) por sexo.")
+    ),
+    mainPanel(
+      plotlyOutput("evolPlot", height = "850px"),
+      hr(),
+      verbatimTextOutput("info")
+    )
+  )
+)
+
+
+
+# Implementamos lógica de funcionamiento del gráfico. Le llamamos servidor o server.
+
+server <- function(input, output, session) {
+
+  #Permite recolectar los filtros que ha añadido el usuario para su aplicación posterior.
+  dat_reactive <- reactive({
+    d <- monthly_base
+
+    # filtro atletas
+    if (!is.null(input$athletes) && length(input$athletes) > 0) {
+      d <- d %>% filter(as.character(Athlete.ID) %in% input$athletes)
+    }
+
+    req(input$sex_filter)  # no sigue hasta que haya valor
+    
+    # filtro sexo
+    if (input$sex_filter != "ALL") {
+      #d <- d %>% filter(Sex == input$sex_filter)
+      d <- d %>% dplyr::filter(Sex == input$sex_filter)
+    }
+
+    # limitar meses
+    d <- d %>% filter(month_index <= input$max_months)
+
+    # completar meses con 0 (opcional)
+    if (isTRUE(input$fill_zeros)) {
+      d <- d %>%
+        group_by(Athlete.ID, Sex) %>%
+        complete(month_index = 1:input$max_months,
+                 fill = list(dist_km = 0, mov_hour = 0, elev_gain = 0)) %>%
+        ungroup()
+    }
+
+    d %>% mutate(month_label = label_month(month_index))
+  })
+
+  #Construimos 3 paneles (uno por cada métrica a analizar).
+  
+  output$evolPlot <- renderPlotly({
+    dat <- dat_reactive()
+    validate(need(nrow(dat) > 0, "No hay datos con esos filtros."))
+
+    max_m <- input$max_months
+
+    # ticks legibles
+    by_step <- dplyr::case_when(max_m <= 24 ~ 1, max_m <= 48 ~ 2, TRUE ~ 3)
+    tickvals <- seq(1, max_m, by = by_step)
+    ticktext <- label_month(tickvals)
+
+    p1 <- make_panel_plotly(dat, "dist_km",   "Distancia mensual (km)", max_m,
+                            show_individual = isTRUE(input$show_individual),
+                            tickvals = tickvals, ticktext = ticktext
+                            ,show_trend_legend = TRUE)
+
+    p2 <- make_panel_plotly(dat, "mov_hour",   "Tiempo en movimiento mensual (h)", max_m,
+                            show_individual = isTRUE(input$show_individual),
+                            tickvals = tickvals, ticktext = ticktext
+                            ,show_trend_legend = FALSE)
+
+    p3 <- make_panel_plotly(dat, "elev_gain", "Desnivel+ mensual (m)", max_m,
+                            show_individual = isTRUE(input$show_individual),
+                            tickvals = tickvals, ticktext = ticktext
+                            ,show_trend_legend = FALSE)
+
+    subplot(p1, p2, p3, nrows = 3, shareX = TRUE, titleY = TRUE) %>%
+      layout(
+autosize = TRUE,
+        legend = list(orientation = "h", x = 0, y = 1.05),
+        margin = list(l = 60, r = 30, t = 60, b = 80)
+      )
+
+  })
+
+  
+  #A modo de ayuda incluimos en el gráfico una especie de consola para mostrar información sobre parámetros actualmente aplicados sobre los gráficos.
+  
+  output$info <- renderPrint({
+    dat <- dat_reactive()
+    list(
+      atletas_mostrados = n_distinct(dat$Athlete.ID),
+      meses_mostrados = input$max_months,
+      sexo = input$sex_filter,
+      lineas_individuales = input$show_individual,
+      meses_con_0 = input$fill_zeros
+    )
+  })
+}
+#Lanzamos aplicación interactiva facilitándole parte interacción junto a la lógica a seguir.
+#options(shiny.launch.browser = FALSE)
+shinyApp(ui, server)
+
+```
+
+
+
