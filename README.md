@@ -11,7 +11,7 @@ El archivo principal de ejecución es "TrailAnalytics_TFM_Joraddo.Rmd" el cual s
 
 Finalmente se aportan dos ficheros más dentro del directorio "Datos": 
 
-  - Activities_final_Analysis.csv : se trata del conjunto de datos ya fusionado y limpio con el que se han generado los gráficos y modelos predictivos finales implicados en la fase de análisis.
+  - Activities_final_Analysis.csv : se trata del conjunto de datos ya fusionado y limpio con el que se han generado los gráficos y modelos predictivos finales implicados en la fase de análisis. Tras la ejecución del archivo principal "TrailAnalytics_TFM_Joraddo.Rmd" se generará dentro del directorio principal y será usado posteriormente como entrada para "TrailAnalytics_GAM.Rmd".
   - 5622375873.fit: se trata de una muestra de un fichero que contiene la información relacionada con la localización de la ruta o actividad punto por punto junto con     información meteorológica adicional. Hablamos de un fichero propuesto para líneas futuras del trabajo.
 
 
