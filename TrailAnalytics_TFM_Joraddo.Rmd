@@ -11,7 +11,7 @@ output:
     number_sections: yes
     includes:
        in_header: TrailAnalytics_TFM_Joraddo.html
-    runtime: shiny
+    #runtime: shiny
   word_document:
     toc: yes
     number_sections: yes
@@ -27,7 +27,8 @@ editor_options:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_knit$set(root.dir = "/Users/Jordi",echo = TRUE)
+#knitr::opts_knit$set(root.dir = "/Users/Jordi",echo = TRUE)
+
 ```
 
 \clearpage
@@ -59,6 +60,8 @@ if (!require("sjPlot")) {
 if (!require("tinytex")) {
   install.packages("tinytex")
 }
+
+
 
 library(dplyr)
 library(lubridate)
@@ -92,28 +95,61 @@ library(mgcv)
 
 ```{r Data upload: activities.csv}
 
-Activities_AN <- read.csv("~/Datos/Exportacion_noviembre/activities_12005698.csv",
-                          stringsAsFactor=TRUE, sep=",")
-Activities_BC <- read.csv("~/Datos/Exportacion_noviembre/activities_39779781.csv",
-                          stringsAsFactor=TRUE, sep=",")
-Activities_IB <- read.csv("~/Datos/Exportacion_noviembre/activities_57717801.csv",
-                          stringsAsFactor=TRUE, sep=",")
-Activities_JA <- read.csv("~/Datos/Exportacion_noviembre/activities_106331448.csv",
-                          stringsAsFactor=TRUE, sep=",")
-Activities_JP <- read.csv("~/Datos/Exportacion_noviembre/activities_21875774.csv",
-                          stringsAsFactor=TRUE, sep=",")
-Activities_LJ <- read.csv("~/Datos/Exportacion_noviembre/activities_63055946.csv",
-                          stringsAsFactor=TRUE, sep=",")
-Activities_MB <- read.csv("~/Datos/Exportacion_noviembre/activities_73163720.csv",
-                          stringsAsFactor=TRUE, sep=",")
-Activities_NC <- read.csv("~/Datos/Exportacion_noviembre/activities_36944607.csv",
-                          stringsAsFactor=TRUE, sep=",")
-Activities_NP <- read.csv("~/Datos/Exportacion_noviembre/activities_49973975.csv",
-                          stringsAsFactor=TRUE, sep=",")
-Activities_RC <- read.csv("~/Datos/Exportacion_noviembre/activities_21939621.csv",
-                          stringsAsFactor=TRUE, sep=",")
-Activities_VS <- read.csv("~/Datos/Exportacion_noviembre/activities_85112912.csv",
-                          stringsAsFactor=TRUE, sep=",")
+# Activities_AN <- read.csv("~TrailAnalytics/Datos/Exportacion_noviembre/activities_12005698.csv",
+#                           stringsAsFactor=TRUE, sep=",")
+# Activities_BC <- read.csv("~TrailAnalytics/Datos/Exportacion_noviembre/activities_39779781.csv",
+#                           stringsAsFactor=TRUE, sep=",")
+# Activities_IB <- read.csv("~TrailAnalytics/Datos/Exportacion_noviembre/activities_57717801.csv",
+#                           stringsAsFactor=TRUE, sep=",")
+# Activities_JA <- read.csv("~TrailAnalytics/Datos/Exportacion_noviembre/activities_106331448.csv",
+#                           stringsAsFactor=TRUE, sep=",")
+# Activities_JP <- read.csv("~TrailAnalytics/Datos/Exportacion_noviembre/activities_21875774.csv",
+#                           stringsAsFactor=TRUE, sep=",")
+# Activities_LJ <- read.csv("~TrailAnalytics/Datos/Exportacion_noviembre/activities_63055946.csv",
+#                           stringsAsFactor=TRUE, sep=",")
+# Activities_MB <- read.csv("~TrailAnalytics/Datos/Exportacion_noviembre/activities_73163720.csv",
+#                           stringsAsFactor=TRUE, sep=",")
+# Activities_NC <- read.csv("~TrailAnalytics/Datos/Exportacion_noviembre/activities_36944607.csv",
+#                           stringsAsFactor=TRUE, sep=",")
+# Activities_NP <- read.csv("~TrailAnalytics/Datos/Exportacion_noviembre/activities_49973975.csv",
+#                           stringsAsFactor=TRUE, sep=",")
+# Activities_RC <- read.csv("~TrailAnalytics/Datos/Exportacion_noviembre/activities_21939621.csv",
+#                           stringsAsFactor=TRUE, sep=",")
+# Activities_VS <- read.csv("~TrailAnalytics/Datos/Exportacion_noviembre/activities_85112912.csv",
+#                           stringsAsFactor=TRUE, sep=",")
+
+# Carpeta de datos dentro del proyecto (ruta relativa)
+base_dir <- file.path("Datos", "Exportacion_noviembre")
+
+files_activities <- c(
+  "activities_12005698.csv",
+  "activities_39779781.csv",
+  "activities_57717801.csv",
+  "activities_106331448.csv",
+  "activities_21875774.csv",
+  "activities_63055946.csv",
+  "activities_73163720.csv",
+  "activities_36944607.csv",
+  "activities_49973975.csv",
+  "activities_21939621.csv",
+  "activities_85112912.csv"
+)
+
+paths_activities <- file.path(base_dir, files_activities)
+
+read_one <- function(p) read.csv(p, stringsAsFactors = TRUE, sep = ",")
+
+Activities_AN <- read_one(paths_activities[1])
+Activities_BC <- read_one(paths_activities[2])
+Activities_IB <- read_one(paths_activities[3])
+Activities_JA <- read_one(paths_activities[4])
+Activities_JP <- read_one(paths_activities[5])
+Activities_LJ <- read_one(paths_activities[6])
+Activities_MB <- read_one(paths_activities[7])
+Activities_NC <- read_one(paths_activities[8])
+Activities_NP <- read_one(paths_activities[9])
+Activities_RC <- read_one(paths_activities[10])
+Activities_VS <- read_one(paths_activities[11])
 
 ```
 
@@ -121,28 +157,59 @@ Activities_VS <- read.csv("~/Datos/Exportacion_noviembre/activities_85112912.csv
 
 ```{r Data upload: profile.csv}
 
-Profile_AN <- read.csv("~/Datos/Exportacion_noviembre/profile_12005698.csv",
-                       stringsAsFactor=TRUE, sep=",")
-Profile_BC <- read.csv("~/Datos/Exportacion_noviembre/profile_39779781.csv",
-                       stringsAsFactor=TRUE, sep=",")
-Profile_IB <- read.csv("~/Datos/Exportacion_noviembre/profile_57717801.csv",
-                       stringsAsFactor=TRUE, sep=",")
-Profile_JA <- read.csv("~/Datos/Exportacion_noviembre/profile_106331448.csv",
-                       stringsAsFactor=TRUE, sep=",")
-Profile_JP <- read.csv("~/Datos/Exportacion_noviembre/profile_21875774.csv",
-                       stringsAsFactor=TRUE, sep=",")
-Profile_LJ <- read.csv("~/Datos/Exportacion_noviembre/profile_63055946.csv",
-                       stringsAsFactor=TRUE, sep=",")
-Profile_MB <- read.csv("~/Datos/Exportacion_noviembre/profile_73163720.csv",
-                       stringsAsFactor=TRUE, sep=",")
-Profile_NC <- read.csv("~/Datos/Exportacion_noviembre/profile_36944607.csv",
-                       stringsAsFactor=TRUE, sep=",")
-Profile_NP <- read.csv("~/Datos/Exportacion_noviembre/profile_49973975.csv",
-                       stringsAsFactor=TRUE, sep=",")
-Profile_RC <- read.csv("~/Datos/Exportacion_noviembre/profile_21939621.csv",
-                       stringsAsFactor=TRUE, sep=",")
-Profile_VS <- read.csv("~/Datos/Exportacion_noviembre/profile_85112912.csv",
-                       stringsAsFactor=TRUE, sep=",")
+# Profile_AN <- read.csv("~TrailAnalytics/Datos/Exportacion_noviembre/profile_12005698.csv",
+#                        stringsAsFactor=TRUE, sep=",")
+# Profile_BC <- read.csv("~TrailAnalytics/Datos/Exportacion_noviembre/profile_39779781.csv",
+#                        stringsAsFactor=TRUE, sep=",")
+# Profile_IB <- read.csv("~TrailAnalytics/Datos/Exportacion_noviembre/profile_57717801.csv",
+#                        stringsAsFactor=TRUE, sep=",")
+# Profile_JA <- read.csv("~TrailAnalytics/Datos/Exportacion_noviembre/profile_106331448.csv",
+#                        stringsAsFactor=TRUE, sep=",")
+# Profile_JP <- read.csv("~TrailAnalytics/Datos/Exportacion_noviembre/profile_21875774.csv",
+#                        stringsAsFactor=TRUE, sep=",")
+# Profile_LJ <- read.csv("~TrailAnalytics/Datos/Exportacion_noviembre/profile_63055946.csv",
+#                        stringsAsFactor=TRUE, sep=",")
+# Profile_MB <- read.csv("~TrailAnalytics/Datos/Exportacion_noviembre/profile_73163720.csv",
+#                        stringsAsFactor=TRUE, sep=",")
+# Profile_NC <- read.csv("~TrailAnalytics/Datos/Exportacion_noviembre/profile_36944607.csv",
+#                        stringsAsFactor=TRUE, sep=",")
+# Profile_NP <- read.csv("~TrailAnalytics/Datos/Exportacion_noviembre/profile_49973975.csv",
+#                        stringsAsFactor=TRUE, sep=",")
+# Profile_RC <- read.csv("~TrailAnalytics/Datos/Exportacion_noviembre/profile_21939621.csv",
+#                        stringsAsFactor=TRUE, sep=",")
+# Profile_VS <- read.csv("~TrailAnalytics/Datos/Exportacion_noviembre/profile_85112912.csv",
+#                        stringsAsFactor=TRUE, sep=",")
+
+
+files_profile <- c(
+  "profile_12005698.csv",
+  "profile_39779781.csv",
+  "profile_57717801.csv",
+  "profile_106331448.csv",
+  "profile_21875774.csv",
+  "profile_63055946.csv",
+  "profile_73163720.csv",
+  "profile_36944607.csv",
+  "profile_49973975.csv",
+  "profile_21939621.csv",
+  "profile_85112912.csv"
+)
+
+paths_profile <- file.path(base_dir, files_profile)
+
+read_one <- function(p) read.csv(p, stringsAsFactors = TRUE, sep = ",")
+
+Profile_AN <- read_one(paths_profile[1])
+Profile_BC <- read_one(paths_profile[2])
+Profile_IB <- read_one(paths_profile[3])
+Profile_JA <- read_one(paths_profile[4])
+Profile_JP <- read_one(paths_profile[5])
+Profile_LJ <- read_one(paths_profile[6])
+Profile_MB <- read_one(paths_profile[7])
+Profile_NC <- read_one(paths_profile[8])
+Profile_NP <- read_one(paths_profile[9])
+Profile_RC <- read_one(paths_profile[10])
+Profile_VS <- read_one(paths_profile[11])
 ```
 
 ## Análisis inicial de los datasets propuestos.
@@ -1149,8 +1216,9 @@ Por su parte,partiendo de cerca de 100 dimensiones o columnas iniciales, nos hem
 
 Con el presente análisis que vamos a practicar, se busca tratar de responder a parte de las preguntas planteadas al inicio del trabajo así como entender con más grado de detalle la estructuración de los mismos:
 
-```{r Generete new dataset - Activities_final_Analysis}
+```{r Generete and export new dataset - Activities_final_Analysis}
 Activities_final_Analysis <- Activities_final_ExtremeValues
+write.csv(Activities_final_Analysis, "Activities_final_Analysis.csv", row.names = FALSE)
 ```
 
 ```{r Correlative matrix - variables }
@@ -1321,6 +1389,7 @@ Notamos una ligera tendencia en forma de U invertida: el ritmo tiende a ser más
 
 # **Aplicación de modelos predictivos.**
 
+## Modelo de regresión lineal.
 ```{r Model definition: lineal model with interaction}
 
 Activities_final_Analysis$Sex <- factor(Activities_final_Analysis$Sex)
@@ -1332,6 +1401,8 @@ summary(modelo_interactivo)
 pred <- ggpredict(modelo_interactivo, terms = c("Average.Temperature", "Sex"))
 plot(pred) + labs(title = "Predicción del ritmo por temperatura y género")
 ```
+
+## Modelo de regresión cuantílica.
 
 ```{r Model definition: quantic regresion with interaction}
 #Trata de dar a entender cómo cambian los ritmos (más rápidos o lentos) bajo ciertas condiciones.
@@ -1347,7 +1418,9 @@ plot(Activities_final_Analysis$Average.Temperature, pred_rq, type = "l", col = "
 
 ```
 
-```{r Shiny APP - Generalized Additive Model  }
+## Modelo evolutivo GAM.
+
+```{r Shiny APP - Generalized Additive Model , eval=FALSE, echo=TRUE}
 
 # Enmascaramos meses y años. Convertir un número de mes relativo  en una etiqueta legible estilo “mes 1 de año 1”.
 label_month <- function(m) {
@@ -1641,4 +1714,17 @@ server <- function(input, output, session) {
 #options(shiny.launch.browser = FALSE)
 shinyApp(ui, server)
 
+```
+
+```{r Shiny APP - Comments , eval=FALSE, echo=TRUE}
+
+Con la finalidad de mejorar la experiencia de uso y tratándose de una aplicación interactiva shiny, se ha exportado la aplicación a un entorno más dinámico. Se encuentra disponible en el siguiente enlace: https://9gi2dw-joraddo.shinyapps.io/TrailAnalytics_GAM/
+```
+
+```{r , echo=FALSE}
+url <- "https://9gi2dw-joraddo.shinyapps.io/TrailAnalytics_GAM/"
+
+knitr::asis_output(
+  sprintf('<a href="%s" target="_blank">App Shiny GAM</a>', url)
+)
 ```
